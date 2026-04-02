@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="ZEngine/ZEngine.vcxproj" Id="e4100e0d-3547-41da-974d-721f0a8f6e7f" />
+</Solution>
