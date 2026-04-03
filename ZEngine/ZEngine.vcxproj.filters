@@ -10,25 +10,40 @@
     <Filter Include="src\Renderer">
       <UniqueIdentifier>{5a7b01d6-e36b-4bb4-8115-10536aa1dd8a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\main">
+      <UniqueIdentifier>{665127d6-4f21-49fd-8246-e4dcdebcf8fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\Core\Application.cpp">
       <Filter>src\Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\Window.cpp">
       <Filter>src\Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\pch.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="src\Renderer\Device.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\Log.cpp">
       <Filter>src\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pch.cpp">
+      <Filter>src\main</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\CommandContext.cpp">
+      <Filter>src\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\Swapchain.cpp">
+      <Filter>src\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\Fence.cpp">
+      <Filter>src\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\Renderer.cpp">
+      <Filter>src\Renderer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -38,9 +53,6 @@
     <ClInclude Include="src\Core\Window.h">
       <Filter>src\Core</Filter>
     </ClInclude>
-    <ClInclude Include="src\pch.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="src\Renderer\Device.h">
       <Filter>src\Renderer</Filter>
     </ClInclude>
@@ -48,6 +60,21 @@
       <Filter>src\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\Renderer\DX12Utils.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pch.h">
+      <Filter>src\main</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\CommandContext.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\Swapchain.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\Fence.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\Renderer.h">
       <Filter>src\Renderer</Filter>
     </ClInclude>
   </ItemGroup>

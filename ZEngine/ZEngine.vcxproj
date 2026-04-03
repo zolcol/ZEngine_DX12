@@ -151,15 +151,23 @@ dxgi.lib
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Renderer\CommandContext.cpp" />
     <ClCompile Include="src\Renderer\Device.cpp" />
+    <ClCompile Include="src\Renderer\Fence.cpp" />
+    <ClCompile Include="src\Renderer\Renderer.cpp" />
+    <ClCompile Include="src\Renderer\Swapchain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h" />
     <ClInclude Include="src\Core\Log.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\Renderer\CommandContext.h" />
     <ClInclude Include="src\Renderer\Device.h" />
     <ClInclude Include="src\Renderer\DX12Utils.h" />
+    <ClInclude Include="src\Renderer\Fence.h" />
+    <ClInclude Include="src\Renderer\Renderer.h" />
+    <ClInclude Include="src\Renderer\Swapchain.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

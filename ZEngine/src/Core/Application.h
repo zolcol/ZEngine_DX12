@@ -1,7 +1,7 @@
 #pragma once
 
 class Window;
-class Device;
+class Renderer;
 
 class Application
 {
@@ -16,8 +16,8 @@ public:
 private:
 	const int WIDTH = 800;
 	const int HEIGHT = 600;
-	const int FRAME_IN_FLIGHT = 2;
+	const int FRAME_COUNT = 3;
 
 	std::unique_ptr<Window> m_Window;
-	std::unique_ptr<Device> m_Device;
+	std::unique_ptr<Renderer> m_Renderer;
 };
