@@ -13,6 +13,7 @@ class Fence;
 class RootSignature;
 class Shader;
 class PipelineState;
+class VertexBuffer;
 
 class Renderer
 {
@@ -33,6 +34,9 @@ private:
 	std::unique_ptr<CommandContext> m_CommandContext;
 	std::unique_ptr<Fence>          m_Fence;
 
+	// --- Vertex Buffer ---
+	std::unique_ptr<VertexBuffer>	m_VertexBuffer;
+
 	// --- Graphics Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
 	std::unique_ptr<Shader>         m_VS;
@@ -40,6 +44,8 @@ private:
 	std::unique_ptr<PipelineState>  m_PSO;
 
 	// --- Thông số cấu hình & Trạng thái ---
+	int		 m_Width		   = 0;
+	int		 m_Height		   = 0;
 	uint32_t m_FrameCount      = 0;
 	int      m_FramesInFlight  = 0;
 	int      m_CurrentFrame    = 0;

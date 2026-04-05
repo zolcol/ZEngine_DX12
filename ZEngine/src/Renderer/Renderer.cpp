@@ -9,6 +9,7 @@
 #include "Shader.h"
 #include "RootSignature.h"
 #include "PipelineState.h"
+#include "VertexBuffer.h"
 
 Renderer::Renderer() = default;
 
@@ -17,6 +18,8 @@ Renderer::~Renderer() = default;
 
 bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 {
+	m_Width = width;
+	m_Height = height;
 	m_FrameCount = frameCount;
 	m_FramesInFlight = frameCount;
 
@@ -42,6 +45,17 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 
 	m_Swapchain = std::make_unique<Swapchain>();
 	m_Swapchain->Init(config, m_Device->GetDevice());
+
+	// Khởi tạo VertexBuffer
+	std::vector<VertexData> vertices =
+	{
+		{ XMFLOAT3(0.0f, 0.5f, 0.0f),  XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // Đỉnh trên (đỏ)
+		{ XMFLOAT3(0.5f, -0.5f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // Đỉnh phải (xanh lá)
+		{ XMFLOAT3(-0.5f, -0.5f, 0.0f),XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }  // Đỉnh trái (xanh dương)
+	};
+
+	m_VertexBuffer = std::make_unique<VertexBuffer>();
+	m_VertexBuffer->Init(m_Device->GetDevice(), vertices);
 
 	// 4. Khởi tạo Graphics Pipeline (Shaders, RootSign, PSO)
 	m_RootSign = std::make_unique<RootSignature>();
@@ -84,6 +98,26 @@ void Renderer::BeginFrame()
 	const float clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
 	commandList->OMSetRenderTargets(1, &currentRTV, false, nullptr);
 	commandList->ClearRenderTargetView(currentRTV, clearColor, 0, nullptr);
+
+	// Thiết lập viewport và scissor
+	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)m_Width, (float)m_Height);
+	CD3DX12_RECT scissorRect(0, 0, m_Width, m_Height);
+
+	commandList->RSSetViewports(1, &viewport);
+	commandList->RSSetScissorRects(1, &scissorRect);
+
+	// Thiết lập Rootsign, PSO
+	commandList->SetGraphicsRootSignature(m_RootSign->Get());
+	commandList->SetPipelineState(m_PSO->Get());
+
+	// Thiết lập Topology
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// Thiết lập Vertex
+	commandList->IASetVertexBuffers(0, 1, &m_VertexBuffer->GetView());
+	
+	// Vẽ
+	commandList->DrawInstanced(m_VertexBuffer->GetVertexCount(), 1, 0, 0);
 }
 
 void Renderer::EndFrame()
