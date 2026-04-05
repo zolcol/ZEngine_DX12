@@ -26,6 +26,11 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_Swapchain = std::make_unique<Swapchain>();
 	m_Swapchain->Init(config, m_Device->GetDevice());
 
+	m_RootSign->Init(m_Device->GetDevice());
+	m_VS->Init(L"src/Renderer/Shaders/shader.hlsl", "VSMain", "vs_5_0");
+	m_PS->Init(L"src/Renderer/Shaders/shader.hlsl", "PSMain", "ps_5_0");
+	m_PSO->Init(m_Device->GetDevice(), *m_RootSign, *m_VS, *m_PS);
+
 	return true;
 }
 

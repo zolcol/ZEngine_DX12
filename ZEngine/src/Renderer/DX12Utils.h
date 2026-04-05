@@ -5,7 +5,7 @@
         HRESULT hr__ = (x); \
         if (FAILED(hr__)) { \
             /* Dùng system_category để dịch mã lỗi C++ chuẩn */ \
-            std::string errMsg = std::system_category().message(hr__); \
+            std::string errMsg = HRToString(hr__); \
             ENGINE_FATAL("DirectX 12 Error!"); \
             ENGINE_FATAL("Function: {}", #x); \
             ENGINE_FATAL("Code: 0x{:08X} - {}", (unsigned int)hr__, errMsg); \
@@ -25,4 +25,10 @@ inline std::string WStringToString(const std::wstring & wstr)
 	std::string strTo(size_needed, 0);
 	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
 	return strTo;
+}
+
+// Hàm chuyển đổi HR sang tiếng người
+inline std::string HRToString(const HRESULT& hr)
+{
+    return std::system_category().message(hr);
 }

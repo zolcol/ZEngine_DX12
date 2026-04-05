@@ -13,6 +13,9 @@
     <Filter Include="src\main">
       <UniqueIdentifier>{665127d6-4f21-49fd-8246-e4dcdebcf8fc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Renderer\Shaders">
+      <UniqueIdentifier>{e9ed2468-bd31-493c-92c8-97c89d0133da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp">
@@ -43,6 +46,15 @@
       <Filter>src\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\Renderer\Renderer.cpp">
+      <Filter>src\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\Shader.cpp">
+      <Filter>src\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\RootSignature.cpp">
+      <Filter>src\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Renderer\PipelineState.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
   </ItemGroup>
@@ -77,8 +89,20 @@
     <ClInclude Include="src\Renderer\Renderer.h">
       <Filter>src\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="src\Renderer\Shader.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\RootSignature.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\PipelineState.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="src\Renderer\Shaders\shader.hlsl">
+      <Filter>src\Renderer\Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

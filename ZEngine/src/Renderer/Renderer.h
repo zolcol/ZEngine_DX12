@@ -4,6 +4,9 @@
 #include "Swapchain.h"
 #include "CommandContext.h"
 #include "Fence.h"
+#include "Shader.h"
+#include "RootSignature.h"
+#include "PipelineState.h"
 
 class Renderer
 {
@@ -22,6 +25,11 @@ private:
 	std::unique_ptr<Swapchain> m_Swapchain;
 	std::unique_ptr<CommandContext> m_CommandContext;
 	std::unique_ptr<Fence> m_Fence;
+
+	std::unique_ptr<RootSignature> m_RootSign;
+	std::unique_ptr<Shader> m_VS;
+	std::unique_ptr<Shader> m_PS;
+	std::unique_ptr<PipelineState> m_PSO;
 
 	uint32_t m_FrameCount;
 	int m_FramesInFlight;
