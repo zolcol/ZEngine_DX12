@@ -13,7 +13,7 @@ class Fence;
 class RootSignature;
 class Shader;
 class PipelineState;
-class VertexBuffer;
+class Buffer;
 
 class Renderer
 {
@@ -28,27 +28,27 @@ public:
 	void ShutDown();
 
 private:
-	// --- Hệ thống Core DX12 ---
+	// --- Infrastructure ---
 	std::unique_ptr<Device>         m_Device;
 	std::unique_ptr<Swapchain>      m_Swapchain;
 	std::unique_ptr<CommandContext> m_CommandContext;
 	std::unique_ptr<Fence>          m_Fence;
 
-	// --- Vertex Buffer ---
-	std::unique_ptr<VertexBuffer>	m_VertexBuffer;
+	// --- Resources ---
+	std::unique_ptr<Buffer>			m_VertexBuffer;
 
-	// --- Graphics Pipeline ---
+	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
 	std::unique_ptr<Shader>         m_VS;
 	std::unique_ptr<Shader>         m_PS;
 	std::unique_ptr<PipelineState>  m_PSO;
 
-	// --- Thông số cấu hình & Trạng thái ---
-	int		 m_Width		   = 0;
-	int		 m_Height		   = 0;
-	uint32_t m_FrameCount      = 0;
-	int      m_FramesInFlight  = 0;
-	int      m_CurrentFrame    = 0;
+	// --- Window & Frame State ---
+	int		 m_Width		      = 0;
+	int		 m_Height		      = 0;
+	uint32_t m_FrameCount         = 0;
+	int      m_FramesInFlight     = 0;
+	int      m_CurrentFrame       = 0;
 	int      m_CurrentBufferIndex = 0;
-	uint64_t m_FenceValue      = 0;
+	uint64_t m_FenceValue         = 0;
 };

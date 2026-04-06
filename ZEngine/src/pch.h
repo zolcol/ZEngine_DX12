@@ -31,3 +31,6 @@ using namespace DirectX;
 // Log
 #include "Core/Log.h"
 #include "Renderer/DX12Utils.h"
+
+// Render Types
+#include "Renderer/RenderTypes.h"

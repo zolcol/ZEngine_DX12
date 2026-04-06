@@ -57,7 +57,7 @@
     <ClCompile Include="src\Renderer\PipelineState.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="src\Renderer\VertexBuffer.cpp">
+    <ClCompile Include="src\Renderer\Buffer.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,7 +101,10 @@
     <ClInclude Include="src\Renderer\PipelineState.h">
       <Filter>src\Renderer</Filter>
     </ClInclude>
-    <ClInclude Include="src\Renderer\VertexBuffer.h">
+    <ClInclude Include="src\Renderer\Buffer.h">
+      <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer\RenderTypes.h">
       <Filter>src\Renderer</Filter>
     </ClInclude>
   </ItemGroup>

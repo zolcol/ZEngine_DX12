@@ -151,6 +151,7 @@ dxgi.lib
     <ClCompile Include="src\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Renderer\Buffer.cpp" />
     <ClCompile Include="src\Renderer\CommandContext.cpp" />
     <ClCompile Include="src\Renderer\Device.cpp" />
     <ClCompile Include="src\Renderer\Fence.cpp" />
@@ -159,23 +160,23 @@ dxgi.lib
     <ClCompile Include="src\Renderer\RootSignature.cpp" />
     <ClCompile Include="src\Renderer\Shader.cpp" />
     <ClCompile Include="src\Renderer\Swapchain.cpp" />
-    <ClCompile Include="src\Renderer\VertexBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h" />
     <ClInclude Include="src\Core\Log.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\Renderer\Buffer.h" />
     <ClInclude Include="src\Renderer\CommandContext.h" />
     <ClInclude Include="src\Renderer\Device.h" />
     <ClInclude Include="src\Renderer\DX12Utils.h" />
     <ClInclude Include="src\Renderer\Fence.h" />
     <ClInclude Include="src\Renderer\PipelineState.h" />
     <ClInclude Include="src\Renderer\Renderer.h" />
+    <ClInclude Include="src\Renderer\RenderTypes.h" />
     <ClInclude Include="src\Renderer\RootSignature.h" />
     <ClInclude Include="src\Renderer\Shader.h" />
     <ClInclude Include="src\Renderer\Swapchain.h" />
-    <ClInclude Include="src\Renderer\VertexBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

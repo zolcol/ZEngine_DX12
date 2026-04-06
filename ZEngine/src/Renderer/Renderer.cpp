@@ -9,11 +9,9 @@
 #include "Shader.h"
 #include "RootSignature.h"
 #include "PipelineState.h"
-#include "VertexBuffer.h"
+#include "Buffer.h"
 
 Renderer::Renderer() = default;
-
-// Bắt buộc phải định nghĩa Destructor ở đây khi dùng unique_ptr với Forward Declaration
 Renderer::~Renderer() = default;
 
 bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
@@ -23,18 +21,17 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_FrameCount = frameCount;
 	m_FramesInFlight = frameCount;
 
-	// 1. Khởi tạo Device & Command System
+	// 1. Hệ thống Core (Device, Command, Sync)
 	m_Device = std::make_unique<Device>();
 	if (!m_Device->Init()) return false;
 
 	m_CommandContext = std::make_unique<CommandContext>();
 	m_CommandContext->Init(m_Device->GetDevice(), m_FramesInFlight);
 
-	// 2. Khởi tạo Đồng bộ hóa (Fence)
 	m_Fence = std::make_unique<Fence>();
 	if (!m_Fence->Init(m_Device->GetDevice())) return false;
 
-	// 3. Khởi tạo Swapchain
+	// 2. Cửa sổ hiển thị (Swapchain)
 	SwapChainConfig config{};
 	config.windowHandle = hwnd;
 	config.factory = m_Device->GetFactory();
@@ -46,18 +43,23 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_Swapchain = std::make_unique<Swapchain>();
 	m_Swapchain->Init(config, m_Device->GetDevice());
 
-	// Khởi tạo VertexBuffer
+	// 3. Khởi tạo tài nguyên (Geometry)
 	std::vector<VertexData> vertices =
 	{
-		{ XMFLOAT3(0.0f, 0.5f, 0.0f),  XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // Đỉnh trên (đỏ)
-		{ XMFLOAT3(0.5f, -0.5f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // Đỉnh phải (xanh lá)
-		{ XMFLOAT3(-0.5f, -0.5f, 0.0f),XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }  // Đỉnh trái (xanh dương)
+		{ XMFLOAT3(0.0f, 0.5f, 0.0f),  XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, 
+		{ XMFLOAT3(0.5f, -0.5f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, 
+		{ XMFLOAT3(-0.5f, -0.5f, 0.0f),XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }  
 	};
 
-	m_VertexBuffer = std::make_unique<VertexBuffer>();
-	m_VertexBuffer->Init(m_Device->GetDevice(), m_CommandContext.get(), vertices);
+	uint32_t bufferSize = static_cast<uint32_t>(sizeof(VertexData) * vertices.size());
+	m_VertexBuffer = std::make_unique<Buffer>();
+	
+	if (!m_VertexBuffer->Init(m_Device->GetDevice(), bufferSize, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON))
+		return false;
 
-	// 4. Khởi tạo Graphics Pipeline (Shaders, RootSign, PSO)
+	m_VertexBuffer->UploadData(m_Device->GetDevice(), m_CommandContext.get(), vertices.data(), bufferSize, 0, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+	// 4. Graphics Pipeline
 	m_RootSign = std::make_unique<RootSignature>();
 	m_RootSign->Init(m_Device->GetDevice());
 
@@ -80,12 +82,13 @@ void Renderer::BeginFrame()
 	auto& frameRes = m_CommandContext->GetFrameCommandResource(m_CurrentFrame);
 	auto commandList = frameRes.commandList.Get();
 
+	// Đợi GPU hoàn thành frame tương ứng trước đó
  	m_Fence->Wait(frameRes.fenceValue);
 
 	frameRes.commandAllocator->Reset();
 	commandList->Reset(frameRes.commandAllocator.Get(), nullptr);
 
-	// Chuyển trạng thái buffer sang RENDER_TARGET để vẽ
+	// Chỉ định Render Target
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_Swapchain->GetBackBuffer(m_CurrentBufferIndex),
 		D3D12_RESOURCE_STATE_PRESENT,
@@ -93,31 +96,29 @@ void Renderer::BeginFrame()
 	);
 	commandList->ResourceBarrier(1, &barrier);
 
-	// Cấu hình Viewport & Render Target
 	D3D12_CPU_DESCRIPTOR_HANDLE currentRTV = m_Swapchain->GetCurrentRTV();
-	const float clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f }; // Màu nền tối hơn
 	commandList->OMSetRenderTargets(1, &currentRTV, false, nullptr);
 	commandList->ClearRenderTargetView(currentRTV, clearColor, 0, nullptr);
 
-	// Thiết lập viewport và scissor
+	// Cấu hình Pipeline State
 	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)m_Width, (float)m_Height);
 	CD3DX12_RECT scissorRect(0, 0, m_Width, m_Height);
-
 	commandList->RSSetViewports(1, &viewport);
 	commandList->RSSetScissorRects(1, &scissorRect);
 
-	// Thiết lập Rootsign, PSO
 	commandList->SetGraphicsRootSignature(m_RootSign->Get());
 	commandList->SetPipelineState(m_PSO->Get());
-
-	// Thiết lập Topology
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	// Thiết lập Vertex
-	commandList->IASetVertexBuffers(0, 1, &m_VertexBuffer->GetView());
+	// Bind Vertex Buffer
+	D3D12_VERTEX_BUFFER_VIEW vbv{};
+	vbv.BufferLocation = m_VertexBuffer->GetGpuAddress();
+	vbv.SizeInBytes = m_VertexBuffer->GetBufferSize();
+	vbv.StrideInBytes = sizeof(VertexData);
+	commandList->IASetVertexBuffers(0, 1, &vbv);
 	
-	// Vẽ
-	commandList->DrawInstanced(m_VertexBuffer->GetVertexCount(), 1, 0, 0);
+	commandList->DrawInstanced(3, 1, 0, 0);
 }
 
 void Renderer::EndFrame()
