@@ -55,7 +55,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	};
 
 	m_VertexBuffer = std::make_unique<VertexBuffer>();
-	m_VertexBuffer->Init(m_Device->GetDevice(), vertices);
+	m_VertexBuffer->Init(m_Device->GetDevice(), m_CommandContext.get(), vertices);
 
 	// 4. Khởi tạo Graphics Pipeline (Shaders, RootSign, PSO)
 	m_RootSign = std::make_unique<RootSignature>();
