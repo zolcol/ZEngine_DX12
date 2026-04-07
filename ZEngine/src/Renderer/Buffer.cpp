@@ -13,6 +13,11 @@ bool Buffer::Init(ID3D12Device* device, uint32_t bufferSize, D3D12_HEAP_TYPE hea
 		return false;
 	}
 
+	if (heapType == D3D12_HEAP_TYPE_UPLOAD)
+	{
+		initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
+	}
+
 	m_BufferSize = bufferSize;
 	m_HeapType = heapType;
 	m_CurrentState = initialState;

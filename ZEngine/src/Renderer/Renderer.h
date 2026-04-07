@@ -14,6 +14,7 @@ class RootSignature;
 class Shader;
 class PipelineState;
 class Buffer;
+class DescriptorManager;
 
 class Renderer
 {
@@ -35,7 +36,9 @@ private:
 	std::unique_ptr<Fence>          m_Fence;
 
 	// --- Resources ---
+	std::unique_ptr<DescriptorManager> m_DescriptorManager;
 	std::unique_ptr<Buffer>			m_VertexBuffer;
+	std::unique_ptr<Buffer>			m_ConstantBuffer;
 
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;

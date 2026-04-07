@@ -153,6 +153,8 @@ dxgi.lib
     </ClCompile>
     <ClCompile Include="src\Renderer\Buffer.cpp" />
     <ClCompile Include="src\Renderer\CommandContext.cpp" />
+    <ClCompile Include="src\Renderer\DescriptorAllocator.cpp" />
+    <ClCompile Include="src\Renderer\DescriptorManager.cpp" />
     <ClCompile Include="src\Renderer\Device.cpp" />
     <ClCompile Include="src\Renderer\Fence.cpp" />
     <ClCompile Include="src\Renderer\PipelineState.cpp" />
@@ -168,6 +170,8 @@ dxgi.lib
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Renderer\Buffer.h" />
     <ClInclude Include="src\Renderer\CommandContext.h" />
+    <ClInclude Include="src\Renderer\DescriptorAllocator.h" />
+    <ClInclude Include="src\Renderer\DescriptorManager.h" />
     <ClInclude Include="src\Renderer\Device.h" />
     <ClInclude Include="src\Renderer\DX12Utils.h" />
     <ClInclude Include="src\Renderer\Fence.h" />

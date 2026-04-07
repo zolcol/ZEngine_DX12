@@ -10,6 +10,11 @@ struct PixelInput
     float4 color    : COLOR;
 };
 
+cbuffer MyCB : register(b0)
+{
+    float colorMul;
+};
+
 PixelInput VSMain(VertexInput input)
 {
     PixelInput output;
@@ -22,5 +27,5 @@ PixelInput VSMain(VertexInput input)
 
 float4 PSMain(PixelInput input) : SV_TARGET
 {
-    return input.color;
+    return input.color * colorMul;
 }

@@ -3,23 +3,15 @@
 
 #include "RootSignature.h"
 #include "Shader.h"
+#include "RenderTypes.h"
 
 bool PipelineState::Init(ID3D12Device* device, const RootSignature& rootSignature, const Shader& vs, const Shader& ps)
 {
-	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-	{
-		// POSITION (3 float = 12 bytes)
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
-		  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-
-		  // COLOR (4 float = 16 bytes), offset = 12 (sau POSITION)
-		  { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12,
-			D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
+	std::vector<D3D12_INPUT_ELEMENT_DESC> inputElementDesc = VertexData::GetInputElementDesc();
 
 	// 2. Thiết lập cấu hình PSO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-	psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+	psoDesc.InputLayout = { inputElementDesc.data(), static_cast<UINT>(inputElementDesc.size())};
 	psoDesc.pRootSignature = rootSignature.Get();
 
 	// Gắn Shader vào

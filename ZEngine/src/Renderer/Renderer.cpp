@@ -10,6 +10,8 @@
 #include "RootSignature.h"
 #include "PipelineState.h"
 #include "Buffer.h"
+#include "DescriptorManager.h"
+
 
 Renderer::Renderer() = default;
 Renderer::~Renderer() = default;
@@ -42,6 +44,18 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 
 	m_Swapchain = std::make_unique<Swapchain>();
 	m_Swapchain->Init(config, m_Device->GetDevice());
+
+	// Khoi tao Descriptor Manager
+	m_DescriptorManager = std::make_unique<DescriptorManager>();
+	m_DescriptorManager->Init(m_Device->GetDevice());
+
+	ConstantBufferData cbData = { 2.0f };
+	m_ConstantBuffer = std::make_unique<Buffer>();
+	uint32_t alignedBufferSize = (sizeof(cbData) + 255) & ~255;
+	m_ConstantBuffer->Init(m_Device->GetDevice(), alignedBufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+	m_ConstantBuffer->UploadData(m_Device->GetDevice(), m_CommandContext.get(), &cbData, sizeof(cbData), 0, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+	uint32_t index = m_DescriptorManager->CreateCBV(m_ConstantBuffer.get());
 
 	// 3. Khởi tạo tài nguyên (Geometry)
 	std::vector<VertexData> vertices =
@@ -110,6 +124,8 @@ void Renderer::BeginFrame()
 	commandList->SetGraphicsRootSignature(m_RootSign->Get());
 	commandList->SetPipelineState(m_PSO->Get());
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	m_DescriptorManager->BindDescriptorHeap(commandList);
 
 	// Bind Vertex Buffer
 	D3D12_VERTEX_BUFFER_VIEW vbv{};
