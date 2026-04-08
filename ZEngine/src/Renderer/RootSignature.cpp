@@ -1,7 +1,12 @@
 #include "pch.h"
 #include "RootSignature.h"
+#include "DescriptorManager.h"
 
-bool RootSignature::Init(ID3D12Device* device)
+RootSignature::RootSignature() = default;
+
+RootSignature::~RootSignature() = default;
+
+bool RootSignature::Init(ID3D12Device* device, DescriptorManager* descriptorManager)
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData{};
 	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -10,11 +15,6 @@ bool RootSignature::Init(ID3D12Device* device)
 	{
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
-
-	// Root CBV
-	CD3DX12_ROOT_PARAMETER1 paramRootCBV;
-	paramRootCBV.InitAsConstantBufferView(0, 1, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_ALL);
-
 
 	// CBV
 	CD3DX12_DESCRIPTOR_RANGE1 rangeCBV;
@@ -43,18 +43,14 @@ bool RootSignature::Init(ID3D12Device* device)
 	CD3DX12_ROOT_PARAMETER1 paramUAV;
 	paramUAV.InitAsDescriptorTable(1, &rangeUAV, D3D12_SHADER_VISIBILITY_ALL);
 
-
-	// Root Signature Desc
-	CD3DX12_ROOT_PARAMETER1 params[] = {
-	paramRootCBV,
-	paramCBV,
-	paramSRV,
-	paramUAV
-	};
+	std::vector<CD3DX12_ROOT_PARAMETER1> params = descriptorManager->GetRootParams();
+	params.push_back(paramCBV);
+	params.push_back(paramSRV);
+	params.push_back(paramUAV);
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc{};
 	desc.Init_1_1(
-		_countof(params), params,
+		params.size(), params.data(),
 		0, nullptr,
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	);

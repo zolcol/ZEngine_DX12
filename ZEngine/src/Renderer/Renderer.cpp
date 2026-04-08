@@ -48,7 +48,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 
 	// Khoi tao Descriptor Manager
 	m_DescriptorManager = std::make_unique<DescriptorManager>();
-	m_DescriptorManager->Init(m_Device->GetDevice());
+	m_DescriptorManager->Init(m_Device->GetDevice(), m_FramesInFlight);
 
 	// 3. Khởi tạo tài nguyên (Geometry)
 	std::vector<VertexData> vertices =
@@ -71,7 +71,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 
 	// 4. Graphics Pipeline
 	m_RootSign = std::make_unique<RootSignature>();
-	m_RootSign->Init(m_Device->GetDevice());
+	m_RootSign->Init(m_Device->GetDevice(), m_DescriptorManager.get());
 
 	m_VS = std::make_unique<Shader>();
 	m_VS->Init(L"src/Renderer/Shaders/shader.hlsl", "VSMain", "vs_5_1");
@@ -122,8 +122,7 @@ void Renderer::BeginFrame()
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Bind Descriptor
-	m_DescriptorManager->BindDescriptorHeap(commandList);
-	commandList->SetGraphicsRootConstantBufferView(0, m_ConstantBuffers[m_CurrentFrame]->GetGpuAddress());
+	m_DescriptorManager->FrameDescriptorBind(commandList, m_CurrentFrame);
 
 	// Bind Vertex Buffer
 	D3D12_VERTEX_BUFFER_VIEW vbv{};
@@ -181,12 +180,23 @@ void Renderer::InitConstantBuffers()
 	m_ConstantBuffersData.resize(m_FramesInFlight);
 	m_ConstantBuffers.resize(m_FramesInFlight);
 
+	std::vector<Buffer*> buffers;
 	uint32_t bufferSize = (sizeof(ConstantBufferData) + 255) & ~255;
+
 	for (size_t i = 0; i < m_FramesInFlight; i++)
 	{
 		m_ConstantBuffers[i] = std::make_unique<Buffer>();
 		m_ConstantBuffers[i]->Init(m_Device->GetDevice(), bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+		
+		buffers.push_back(m_ConstantBuffers[i].get());
 	}
+
+	m_DescriptorManager->CreateRootCBVPerFrame(
+		buffers,
+		0, 1,
+		D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
+		D3D12_SHADER_VISIBILITY_ALL
+	);
 }
 
 void Renderer::UpdateConstantBuffesData(int currentFrame)
