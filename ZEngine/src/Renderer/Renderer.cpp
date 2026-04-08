@@ -78,10 +78,10 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_RootSign->Init(m_Device->GetDevice());
 
 	m_VS = std::make_unique<Shader>();
-	m_VS->Init(L"src/Renderer/Shaders/shader.hlsl", "VSMain", "vs_5_0");
+	m_VS->Init(L"src/Renderer/Shaders/shader.hlsl", "VSMain", "vs_5_1");
 
 	m_PS = std::make_unique<Shader>();
-	m_PS->Init(L"src/Renderer/Shaders/shader.hlsl", "PSMain", "ps_5_0");
+	m_PS->Init(L"src/Renderer/Shaders/shader.hlsl", "PSMain", "ps_5_1");
 
 	m_PSO = std::make_unique<PipelineState>();
 	m_PSO->Init(m_Device->GetDevice(), *m_RootSign, *m_VS, *m_PS);
