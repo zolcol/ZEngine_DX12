@@ -66,6 +66,9 @@
     <ClCompile Include="src\Renderer\DescriptorAllocator.cpp">
       <Filter>src\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\Time.cpp">
+      <Filter>src\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -118,6 +121,9 @@
     </ClInclude>
     <ClInclude Include="src\Renderer\DescriptorAllocator.h">
       <Filter>src\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Core\Time.h">
+      <Filter>src\Core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

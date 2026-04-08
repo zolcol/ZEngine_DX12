@@ -36,9 +36,11 @@ private:
 	std::unique_ptr<Fence>          m_Fence;
 
 	// --- Resources ---
-	std::unique_ptr<DescriptorManager> m_DescriptorManager;
-	std::unique_ptr<Buffer>			m_VertexBuffer;
-	std::unique_ptr<Buffer>			m_ConstantBuffer;
+	std::unique_ptr<DescriptorManager>		m_DescriptorManager;
+	std::unique_ptr<Buffer>					m_VertexBuffer;
+	std::vector<std::unique_ptr<Buffer>>	m_ConstantBuffers;
+	std::vector<ConstantBufferData>			m_ConstantBuffersData;
+
 
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
@@ -54,4 +56,7 @@ private:
 	int      m_CurrentFrame       = 0;
 	int      m_CurrentBufferIndex = 0;
 	uint64_t m_FenceValue         = 0;
+
+	void InitConstantBuffers();
+	void UpdateConstantBuffesData(int currentFrame);
 };

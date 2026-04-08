@@ -25,5 +25,8 @@ struct VertexData
 
 struct ConstantBufferData
 {
-	float colorMul;
+	XMFLOAT4X4 WorldMatrix;
+	XMFLOAT4X4 ViewMatrix;
+	XMFLOAT4X4 ProjectionMatrix;
 };
+

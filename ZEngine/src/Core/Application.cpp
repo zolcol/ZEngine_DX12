@@ -3,6 +3,7 @@
 
 #include "Window.h"
 #include <Renderer/Renderer.h>
+#include "Time.h"
 
 Application::Application() = default;
 
@@ -20,6 +21,8 @@ void Application::Init()
 		return;
 	}
 
+	Time::Init();
+
 	ENGINE_INFO("Application Initialized Successfully.");
 }
 
@@ -27,6 +30,8 @@ void Application::Run()
 {
 	while (m_Window->ProcessMessages())
 	{
+		Time::Update();
+
 		m_Renderer->BeginFrame();
 		m_Renderer->EndFrame();
 	}

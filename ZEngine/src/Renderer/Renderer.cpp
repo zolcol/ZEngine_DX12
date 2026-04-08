@@ -11,6 +11,7 @@
 #include "PipelineState.h"
 #include "Buffer.h"
 #include "DescriptorManager.h"
+#include <Core/Time.h>
 
 
 Renderer::Renderer() = default;
@@ -49,14 +50,6 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_DescriptorManager = std::make_unique<DescriptorManager>();
 	m_DescriptorManager->Init(m_Device->GetDevice());
 
-	ConstantBufferData cbData = { 2.0f };
-	m_ConstantBuffer = std::make_unique<Buffer>();
-	uint32_t alignedBufferSize = (sizeof(cbData) + 255) & ~255;
-	m_ConstantBuffer->Init(m_Device->GetDevice(), alignedBufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-	m_ConstantBuffer->UploadData(m_Device->GetDevice(), m_CommandContext.get(), &cbData, sizeof(cbData), 0, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-
-	uint32_t index = m_DescriptorManager->CreateCBV(m_ConstantBuffer.get());
-
 	// 3. Khởi tạo tài nguyên (Geometry)
 	std::vector<VertexData> vertices =
 	{
@@ -72,6 +65,9 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 		return false;
 
 	m_VertexBuffer->UploadData(m_Device->GetDevice(), m_CommandContext.get(), vertices.data(), bufferSize, 0, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+
+	// Khởi tạo Constant Buffer.
+	InitConstantBuffers();
 
 	// 4. Graphics Pipeline
 	m_RootSign = std::make_unique<RootSignature>();
@@ -125,7 +121,9 @@ void Renderer::BeginFrame()
 	commandList->SetPipelineState(m_PSO->Get());
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+	// Bind Descriptor
 	m_DescriptorManager->BindDescriptorHeap(commandList);
+	commandList->SetGraphicsRootConstantBufferView(0, m_ConstantBuffers[m_CurrentFrame]->GetGpuAddress());
 
 	// Bind Vertex Buffer
 	D3D12_VERTEX_BUFFER_VIEW vbv{};
@@ -134,6 +132,9 @@ void Renderer::BeginFrame()
 	vbv.StrideInBytes = sizeof(VertexData);
 	commandList->IASetVertexBuffers(0, 1, &vbv);
 	
+	//Update ConstantBuffer 
+	UpdateConstantBuffesData(m_CurrentFrame);
+
 	commandList->DrawInstanced(3, 1, 0, 0);
 }
 
@@ -173,4 +174,56 @@ void Renderer::ShutDown()
 	{
 		m_Fence->Flush(m_CommandContext->GetCommandQueue(), m_FenceValue);
 	}
+}
+
+void Renderer::InitConstantBuffers()
+{
+	m_ConstantBuffersData.resize(m_FramesInFlight);
+	m_ConstantBuffers.resize(m_FramesInFlight);
+
+	uint32_t bufferSize = (sizeof(ConstantBufferData) + 255) & ~255;
+	for (size_t i = 0; i < m_FramesInFlight; i++)
+	{
+		m_ConstantBuffers[i] = std::make_unique<Buffer>();
+		m_ConstantBuffers[i]->Init(m_Device->GetDevice(), bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+	}
+}
+
+void Renderer::UpdateConstantBuffesData(int currentFrame)
+{
+	float time = Time::GetTotalTime();
+
+	// 🔹 World (xoay object)
+	XMMATRIX world = XMMatrixRotationY(time);
+
+	// 🔹 Camera
+	XMVECTOR eye = XMVectorSet(0.0f, 0.0f, -2.0f, 1.0f);
+	XMVECTOR target = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+	XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
+
+	// 🔹 Projection
+	float aspect = (float)m_Width / (float)m_Height;
+
+	XMMATRIX proj = XMMatrixPerspectiveFovLH(
+		XM_PIDIV4,
+		aspect,
+		0.1f,
+		100.0f
+	);
+
+	// 🔥 Ghi vào constant buffer (NHỚ transpose)
+	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].WorldMatrix, XMMatrixTranspose(world));
+	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ViewMatrix, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ProjectionMatrix, XMMatrixTranspose(proj));
+
+
+	// Upload To Constant Buffer
+	m_ConstantBuffers[currentFrame]->UploadData(
+		m_Device->GetDevice(), m_CommandContext.get(),
+		&m_ConstantBuffersData[currentFrame],
+		sizeof(m_ConstantBuffersData[currentFrame]), 0,
+		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+	);
 }

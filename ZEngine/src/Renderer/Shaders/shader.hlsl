@@ -10,16 +10,24 @@ struct PixelInput
     float4 color    : COLOR;
 };
 
-cbuffer MyCB : register(b0)
+cbuffer ConstantBufferData : register(b0, space1)
 {
-    float colorMul;
+    float4x4 WorldMatrix;
+    float4x4 ViewMatrix;
+    float4x4 ProjectionMatrix;
 };
 
 PixelInput VSMain(VertexInput input)
 {
     PixelInput output;
     
-    output.position = float4(input.position, 1.0f);
+    float4 pos = float4(input.position, 1.0f);
+
+    pos = mul(pos, WorldMatrix);
+    pos = mul(pos, ViewMatrix);
+    pos = mul(pos, ProjectionMatrix);
+
+    output.position = pos;
     output.color = input.color;
     
     return output;
@@ -27,5 +35,5 @@ PixelInput VSMain(VertexInput input)
 
 float4 PSMain(PixelInput input) : SV_TARGET
 {
-    return input.color * colorMul;
+    return input.color;
 }

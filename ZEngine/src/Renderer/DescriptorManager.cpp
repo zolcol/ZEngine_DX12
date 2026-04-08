@@ -44,8 +44,8 @@ void DescriptorManager::BindDescriptorHeap(ID3D12GraphicsCommandList* cmdList)
 	};
 
 	cmdList->SetDescriptorHeaps(_countof(heaps), heaps);
-	cmdList->SetGraphicsRootDescriptorTable(0, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// CBV
-	cmdList->SetGraphicsRootDescriptorTable(1, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// SRV
-	cmdList->SetGraphicsRootDescriptorTable(2, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// UAV
+	cmdList->SetGraphicsRootDescriptorTable(1, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// CBV
+	cmdList->SetGraphicsRootDescriptorTable(2, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// SRV
+	cmdList->SetGraphicsRootDescriptorTable(3, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// UAV
 }
 

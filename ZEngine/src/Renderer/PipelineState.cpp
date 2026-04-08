@@ -20,6 +20,7 @@ bool PipelineState::Init(ID3D12Device* device, const RootSignature& rootSignatur
 
 	// Các trạng thái mặc định (Dùng helper từ d3dx12.h sẽ nhanh hơn)
 	psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 	psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 	psoDesc.DepthStencilState.DepthEnable = FALSE; // Tạm thời tắt vì chưa có Depth Buffer
 	psoDesc.DepthStencilState.StencilEnable = FALSE;

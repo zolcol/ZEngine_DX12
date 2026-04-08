@@ -146,6 +146,7 @@ dxgi.lib
     <ClCompile Include="src\Core\Log.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Core\Time.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\pch.cpp">
@@ -166,6 +167,7 @@ dxgi.lib
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h" />
     <ClInclude Include="src\Core\Log.h" />
+    <ClInclude Include="src\Core\Time.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Renderer\Buffer.h" />
