@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "DescriptorManager.h"
-
 #include "Buffer.h"
 
 DescriptorManager::DescriptorManager() = default;
@@ -10,14 +9,43 @@ bool DescriptorManager::Init(ID3D12Device* device, uint32_t frameCount)
 {
 	m_Device = device;
 	m_FrameCount = frameCount;
-	m_RootCBVsData.resize(frameCount);
 
+	// Khởi tạo không gian lưu trữ địa chỉ CBV cho từng frame
+	m_RootCBVsAddress.resize(frameCount);
+
+	// Khởi tạo các Heap Allocators
 	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 100000);
-	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 2048);				// Tạo cho đủ index mảng KHÔNG DÙNG.
+	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 2048);
 	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
 	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 256);
-	
+
 	return true;
+}
+
+void DescriptorManager::SetupStandardDescriptorTables()
+{
+	// Lưu lại index bắt đầu của các bảng Unbound
+	m_TableParamStartIndex = (uint32_t)m_RootParams.size();
+
+	// 1. CBV Table
+	m_TableRanges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, UINT_MAX, 0, 0,
+		D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE | D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+	// 2. SRV Table
+	m_TableRanges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 0, 0,
+		D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE | D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+	// 3. UAV Table
+	m_TableRanges[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, 0, 0,
+		D3D12_DESCRIPTOR_RANGE_FLAG_DATA_VOLATILE | D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+
+	// Đưa 3 bảng vào RootParams
+	for (int i = 0; i < 3; ++i)
+	{
+		CD3DX12_ROOT_PARAMETER1 tableParam;
+		tableParam.InitAsDescriptorTable(1, &m_TableRanges[i], D3D12_SHADER_VISIBILITY_ALL);
+		m_RootParams.push_back(tableParam);
+	}
 }
 
 uint32_t DescriptorManager::CreateCBV(Buffer* buffer)
@@ -39,54 +67,62 @@ uint32_t DescriptorManager::CreateCBV(Buffer* buffer)
 	return index;
 }
 
-void DescriptorManager::BindDescriptorHeap(int startParamIndex, ID3D12GraphicsCommandList* cmdList)
-{
-	ID3D12DescriptorHeap* heaps[] = {
-		m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetDescriptorHeap()
-	};
-
-	cmdList->SetDescriptorHeaps(_countof(heaps), heaps);
-	cmdList->SetGraphicsRootDescriptorTable(startParamIndex	   , m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// CBV
-	cmdList->SetGraphicsRootDescriptorTable(startParamIndex + 1, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// SRV
-	cmdList->SetGraphicsRootDescriptorTable(startParamIndex + 2, m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle());	// UAV
-}
-
 void DescriptorManager::FrameDescriptorBind(ID3D12GraphicsCommandList* cmdList, int currentFrame)
 {
-	const std::vector<RootCBVData>& cbvFramedData = m_RootCBVsData[currentFrame];
-	for (size_t i = 0; i < cbvFramedData.size(); i++)
+	// 1. Bind các Root CBVs cho frame này
+	const auto& frameAddresses = m_RootCBVsAddress[currentFrame];
+	for (uint32_t i = 0; i < (uint32_t)frameAddresses.size(); ++i)
 	{
-		cmdList->SetGraphicsRootConstantBufferView(i, cbvFramedData[i].GetGpuAddress());
+		cmdList->SetGraphicsRootConstantBufferView(i, frameAddresses[i]);
 	}
 
-	BindDescriptorHeap(cbvFramedData.size(), cmdList);
+	// 2. Bind Descriptor Heaps và các Unbound Tables
+	BindDescriptorHeaps(cmdList);
+}
+
+void DescriptorManager::BindDescriptorHeaps(ID3D12GraphicsCommandList* cmdList)
+{
+	ID3D12DescriptorHeap* heaps[] = { m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetDescriptorHeap() };
+	cmdList->SetDescriptorHeaps(_countof(heaps), heaps);
+
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuStart = m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle();
+
+	// Bind CBV, SRV, UAV Tables vào đúng các slot cuối trong Root Signature
+	cmdList->SetGraphicsRootDescriptorTable(m_TableParamStartIndex, gpuStart);
+	cmdList->SetGraphicsRootDescriptorTable(m_TableParamStartIndex + 1, gpuStart);
+	cmdList->SetGraphicsRootDescriptorTable(m_TableParamStartIndex + 2, gpuStart);
 }
 
 void DescriptorManager::CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility)
 {
-	for (auto& rootCBVFrameData : m_RootCBVsData)
-	{
-		RootCBVData cbvData(buffer->GetGpuAddress(), baseRegister, space, flags, visibility);
-		rootCBVFrameData.push_back(cbvData);
-	}
+	// Đăng ký Layout (Chỉ làm 1 lần)
+	CD3DX12_ROOT_PARAMETER1 cbvParam;
+	cbvParam.InitAsConstantBufferView(baseRegister, space, flags, visibility);
+	m_RootParams.push_back(cbvParam);
 
-	m_RootParams.push_back(m_RootCBVsData[0].back().GetParam());
+	// Lưu trữ giá trị cho tất cả các frame (Vì là Buffer cố định)
+	for (auto& frameAddrs : m_RootCBVsAddress)
+	{
+		frameAddrs.push_back(buffer->GetGpuAddress());
+	}
 }
 
 void DescriptorManager::CreateRootCBVPerFrame(const std::vector<Buffer*>& buffers, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility)
 {
 	if (buffers.size() != m_FrameCount)
 	{
-		ENGINE_FATAL("Buffers Size Must Equal FramesInFlight!!!");
+		ENGINE_FATAL("CreateRootCBVPerFrame: Buffers size must match frame count!");
 		return;
 	}
 
-	for (size_t i = 0; i < m_FrameCount; i++)
+	// Đăng ký Layout (Chỉ làm 1 lần)
+	CD3DX12_ROOT_PARAMETER1 cbvParam;
+	cbvParam.InitAsConstantBufferView(baseRegister, space, flags, visibility);
+	m_RootParams.push_back(cbvParam);
+
+	// Lưu trữ giá trị địa chỉ thực tế cho từng frame tương ứng
+	for (size_t i = 0; i < m_FrameCount; ++i)
 	{
-		RootCBVData cbvData(buffers[i]->GetGpuAddress(), baseRegister, space, flags, visibility);
-		m_RootCBVsData[i].push_back(cbvData);
+		m_RootCBVsAddress[i].push_back(buffers[i]->GetGpuAddress());
 	}
-
-	m_RootParams.push_back(m_RootCBVsData[0].back().GetParam());
 }
-

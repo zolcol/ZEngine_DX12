@@ -50,6 +50,9 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_DescriptorManager = std::make_unique<DescriptorManager>();
 	m_DescriptorManager->Init(m_Device->GetDevice(), m_FramesInFlight);
 
+	// Khởi tạo Constant Buffer (Đăng ký Root CBV trước)
+	InitConstantBuffers();
+
 	// 3. Khởi tạo tài nguyên (Geometry)
 	std::vector<VertexData> vertices =
 	{
@@ -60,14 +63,14 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 
 	uint32_t bufferSize = static_cast<uint32_t>(sizeof(VertexData) * vertices.size());
 	m_VertexBuffer = std::make_unique<Buffer>();
-	
+
 	if (!m_VertexBuffer->Init(m_Device->GetDevice(), bufferSize, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON))
 		return false;
 
 	m_VertexBuffer->UploadData(m_Device->GetDevice(), m_CommandContext.get(), vertices.data(), bufferSize, 0, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
 
-	// Khởi tạo Constant Buffer.
-	InitConstantBuffers();
+	// Chốt cấu trúc Descriptor Tables (Bindless) sau khi đã có hết các Root CBV
+	m_DescriptorManager->SetupStandardDescriptorTables();
 
 	// 4. Graphics Pipeline
 	m_RootSign = std::make_unique<RootSignature>();

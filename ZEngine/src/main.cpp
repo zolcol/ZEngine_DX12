@@ -11,4 +11,6 @@ int main()
 	app.Init();
 	app.Run();
 	app.ShutDown();
+
+	return 0;
 }	
