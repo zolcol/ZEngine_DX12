@@ -154,7 +154,7 @@ void Renderer::BeginFrame()
 	);
 	commandList->ResourceBarrier(1, &barrier);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE currentRTVCpuHandle = m_Swapchain->GetCurrentRTV();;
+	D3D12_CPU_DESCRIPTOR_HANDLE currentRTVCpuHandle = m_Swapchain->GetCurrentRTVCpuHandle();;
 	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f }; // Màu nền tối hơn
 	commandList->OMSetRenderTargets(1, &currentRTVCpuHandle, false, &m_DepthCpuHandle);
 	commandList->ClearRenderTargetView(currentRTVCpuHandle, clearColor, 0, nullptr);
@@ -171,7 +171,7 @@ void Renderer::BeginFrame()
 	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// Bind Descriptor
-	m_DescriptorManager->FrameDescriptorBind(commandList, m_CurrentFrame);
+	m_DescriptorManager->BindDescriptors(commandList, m_CurrentFrame);
 
 	// Bind Vertex Buffer
 	D3D12_VERTEX_BUFFER_VIEW vbv{};
@@ -181,7 +181,7 @@ void Renderer::BeginFrame()
 	commandList->IASetVertexBuffers(0, 1, &vbv);
 	
 	//Update ConstantBuffer 
-	UpdateConstantBuffesData(m_CurrentFrame);
+	UpdateConstantBuffersData(m_CurrentFrame);
 
 	commandList->DrawInstanced(36, 1, 0, 0);
 }
@@ -248,7 +248,7 @@ void Renderer::InitConstantBuffers()
 	);
 }
 
-void Renderer::UpdateConstantBuffesData(int currentFrame)
+void Renderer::UpdateConstantBuffersData(int currentFrame)
 {
 	float time = Time::GetTotalTime();
 

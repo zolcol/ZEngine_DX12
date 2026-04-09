@@ -60,7 +60,7 @@ private:
 	uint64_t m_FenceValue         = 0;
 
 	void InitConstantBuffers();
-	void UpdateConstantBuffesData(int currentFrame);
+	void UpdateConstantBuffersData(int currentFrame);
 
 	void InitDepthBuffer();
 };
