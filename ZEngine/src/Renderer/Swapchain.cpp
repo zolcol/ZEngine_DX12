@@ -1,7 +1,12 @@
 #include "pch.h"
 #include "Swapchain.h"
+#include "DescriptorManager.h"
 
-void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device)
+Swapchain::Swapchain() = default;
+
+Swapchain::~Swapchain() = default;
+
+void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device, DescriptorManager* descriptorManager)
 {
 	m_SwapchainConfig = config;
 
@@ -19,36 +24,17 @@ void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device)
 
 	tempSwapchain.As(&m_Swapchain);
 
-	// Create Descriptor
-	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-	rtvHeapDesc.NumDescriptors = config.frameCount;
-	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	CHECK(device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_RTVHeap)));
-
-	m_RtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	
+	// Create RTV Descriptor
 	m_BackBuffers.resize(config.frameCount);
-
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_RTVHeap->GetCPUDescriptorHandleForHeapStart());
+	m_BackBuffersRTV.resize(config.frameCount);
 
 	for (size_t i = 0; i < config.frameCount; i++)
 	{
 		CHECK(m_Swapchain->GetBuffer(i, IID_PPV_ARGS(&m_BackBuffers[i])));
-
-		device->CreateRenderTargetView(m_BackBuffers[i].Get(), nullptr, rtvHandle);
-
-		rtvHandle.Offset(1, m_RtvDescriptorSize);
+		
+		int index = descriptorManager->CreateRTV(m_BackBuffers[i].Get());
+		m_BackBuffersRTV[i] = descriptorManager->GetRTVCPUHandle(index);
 	}
-
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE Swapchain::GetCurrentRTV()
-{
-	return CD3DX12_CPU_DESCRIPTOR_HANDLE(
-		m_RTVHeap->GetCPUDescriptorHandleForHeapStart(),
-		m_Swapchain->GetCurrentBackBufferIndex(),
-		m_RtvDescriptorSize
-	);
-}
 

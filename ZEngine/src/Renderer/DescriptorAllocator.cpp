@@ -32,10 +32,10 @@ bool DescriptorAllocator::Allocate(uint32_t& index, D3D12_CPU_DESCRIPTOR_HANDLE&
 		return false;
 	}
 	index = m_CurrentIndex;
-	cpuHandle = m_HeapStartCpuHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE currentCpuHandle(m_HeapStartCpuHandle, m_CurrentIndex, m_DescriptorHandleSize);
+	cpuHandle = currentCpuHandle;
 
 	m_CurrentIndex += 1;
-	m_HeapStartCpuHandle.Offset(1, m_DescriptorHandleSize);
 
 	return true;
 }

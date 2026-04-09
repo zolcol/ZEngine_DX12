@@ -41,6 +41,8 @@ private:
 	std::vector<std::unique_ptr<Buffer>>	m_ConstantBuffers;
 	std::vector<ConstantBufferData>			m_ConstantBuffersData;
 
+	ComPtr<ID3D12Resource>			m_DepthBuffer;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_DepthCpuHandle;
 
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
@@ -59,4 +61,6 @@ private:
 
 	void InitConstantBuffers();
 	void UpdateConstantBuffesData(int currentFrame);
+
+	void InitDepthBuffer();
 };

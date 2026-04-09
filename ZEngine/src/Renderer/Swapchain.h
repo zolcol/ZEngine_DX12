@@ -1,5 +1,7 @@
 #pragma once
 
+class DescriptorManager;
+
 struct SwapChainConfig
 {
 	HWND windowHandle = nullptr;
@@ -13,20 +15,19 @@ struct SwapChainConfig
 class Swapchain
 {
 public:
-	Swapchain() = default;
-	~Swapchain() = default;
+	Swapchain();
+	~Swapchain();
 
 	uint32_t GetCurrentBackBufferIndex() const { return m_Swapchain->GetCurrentBackBufferIndex(); }
 	ID3D12Resource* GetBackBuffer(int currentFrame) const { return m_BackBuffers[currentFrame].Get(); }
 	IDXGISwapChain4* GetSwapchain() const { return m_Swapchain.Get(); }
 
-	void Init(const SwapChainConfig& config, ID3D12Device* device);
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV();
+	void Init(const SwapChainConfig& config, ID3D12Device* device, DescriptorManager* descriptorManager);
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTV() const { return m_BackBuffersRTV[GetCurrentBackBufferIndex()]; };
 private:
 	SwapChainConfig m_SwapchainConfig;
 	ComPtr<IDXGISwapChain4> m_Swapchain;
 
-	ComPtr<ID3D12DescriptorHeap> m_RTVHeap;
-	uint32_t m_RtvDescriptorSize;
 	std::vector<ComPtr<ID3D12Resource>> m_BackBuffers;
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_BackBuffersRTV;
 };

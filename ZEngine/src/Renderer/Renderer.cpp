@@ -34,6 +34,10 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_Fence = std::make_unique<Fence>();
 	if (!m_Fence->Init(m_Device->GetDevice())) return false;
 
+	// Khoi tao Descriptor Manager
+	m_DescriptorManager = std::make_unique<DescriptorManager>();
+	m_DescriptorManager->Init(m_Device->GetDevice(), m_FramesInFlight);
+
 	// 2. Cửa sổ hiển thị (Swapchain)
 	SwapChainConfig config{};
 	config.windowHandle = hwnd;
@@ -44,21 +48,62 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	config.frameCount = m_FrameCount;
 
 	m_Swapchain = std::make_unique<Swapchain>();
-	m_Swapchain->Init(config, m_Device->GetDevice());
-
-	// Khoi tao Descriptor Manager
-	m_DescriptorManager = std::make_unique<DescriptorManager>();
-	m_DescriptorManager->Init(m_Device->GetDevice(), m_FramesInFlight);
+	m_Swapchain->Init(config, m_Device->GetDevice(), m_DescriptorManager.get());
 
 	// Khởi tạo Constant Buffer (Đăng ký Root CBV trước)
+	InitDepthBuffer();
 	InitConstantBuffers();
 
 	// 3. Khởi tạo tài nguyên (Geometry)
 	std::vector<VertexData> vertices =
 	{
-		{ XMFLOAT3(0.0f, 0.5f, 0.0f),  XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, 
-		{ XMFLOAT3(0.5f, -0.5f, 0.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, 
-		{ XMFLOAT3(-0.5f, -0.5f, 0.0f),XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }  
+		// Mặt trước (Front) - Đỏ
+		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+
+		// Mặt sau (Back) - Xanh lá
+		{ XMFLOAT3( 0.5f,  0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f,  0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+
+		// Mặt trái (Left) - Xanh dương
+		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+
+		// Mặt phải (Right) - Vàng
+		{ XMFLOAT3( 0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+
+		// Mặt trên (Top) - Tím (Magenta)
+		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+
+		// Mặt dưới (Bottom) - Lục lam (Cyan)
+		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f, -0.5f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+		{ XMFLOAT3( 0.5f, -0.5f,  0.5f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }
 	};
 
 	uint32_t bufferSize = static_cast<uint32_t>(sizeof(VertexData) * vertices.size());
@@ -109,10 +154,11 @@ void Renderer::BeginFrame()
 	);
 	commandList->ResourceBarrier(1, &barrier);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE currentRTV = m_Swapchain->GetCurrentRTV();
+	D3D12_CPU_DESCRIPTOR_HANDLE currentRTVCpuHandle = m_Swapchain->GetCurrentRTV();;
 	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f }; // Màu nền tối hơn
-	commandList->OMSetRenderTargets(1, &currentRTV, false, nullptr);
-	commandList->ClearRenderTargetView(currentRTV, clearColor, 0, nullptr);
+	commandList->OMSetRenderTargets(1, &currentRTVCpuHandle, false, &m_DepthCpuHandle);
+	commandList->ClearRenderTargetView(currentRTVCpuHandle, clearColor, 0, nullptr);
+	commandList->ClearDepthStencilView(m_DepthCpuHandle, D3D12_CLEAR_FLAG_DEPTH, 1, 0, 0, nullptr);
 
 	// Cấu hình Pipeline State
 	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)m_Width, (float)m_Height);
@@ -137,7 +183,7 @@ void Renderer::BeginFrame()
 	//Update ConstantBuffer 
 	UpdateConstantBuffesData(m_CurrentFrame);
 
-	commandList->DrawInstanced(3, 1, 0, 0);
+	commandList->DrawInstanced(36, 1, 0, 0);
 }
 
 void Renderer::EndFrame()
@@ -210,7 +256,7 @@ void Renderer::UpdateConstantBuffesData(int currentFrame)
 	XMMATRIX world = XMMatrixRotationY(time);
 
 	// 🔹 Camera
-	XMVECTOR eye = XMVectorSet(0.0f, 0.0f, -2.0f, 1.0f);
+	XMVECTOR eye = XMVectorSet(0.0f, 2.0f, -3.0f, 1.0f);
 	XMVECTOR target = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
@@ -239,4 +285,28 @@ void Renderer::UpdateConstantBuffesData(int currentFrame)
 		sizeof(m_ConstantBuffersData[currentFrame]), 0,
 		D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
 	);
+}
+
+void Renderer::InitDepthBuffer()
+{
+	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+
+	CD3DX12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_D32_FLOAT, m_Width, m_Height,
+		1, 0, 1, 0,
+		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN
+	);
+
+	CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_D32_FLOAT, 1, 0);
+	
+	CHECK(m_Device->GetDevice()->CreateCommittedResource(
+		&heapProps, D3D12_HEAP_FLAG_NONE,
+		&resDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&clearValue, 
+		IID_PPV_ARGS(&m_DepthBuffer)
+	));
+
+	uint32_t index = m_DescriptorManager->CreateDSV(m_DepthBuffer.Get());
+	m_DepthCpuHandle = m_DescriptorManager->GetDSVCPUHandle(index);
 }

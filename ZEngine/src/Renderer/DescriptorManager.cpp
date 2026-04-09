@@ -5,6 +5,32 @@
 DescriptorManager::DescriptorManager() = default;
 DescriptorManager::~DescriptorManager() = default;
 
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorManager::GetRTVCPUHandle(uint32_t index)
+{
+	if (index >= m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].GetCurrentIndex())
+	{
+		ENGINE_ERROR("Invalid RTV Index: {}", index);
+		return D3D12_CPU_DESCRIPTOR_HANDLE();
+	}
+	else
+	{
+		return m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].GetCPUDescriptorHandle(index);
+	}
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorManager::GetDSVCPUHandle(uint32_t index)
+{
+	if (index >= m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].GetCurrentIndex())
+	{
+		ENGINE_ERROR("Invalid DSV Index: {}", index);
+		return D3D12_CPU_DESCRIPTOR_HANDLE();
+	}
+	else
+	{
+		return m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].GetCPUDescriptorHandle(index);
+	}
+}
+
 bool DescriptorManager::Init(ID3D12Device* device, uint32_t frameCount)
 {
 	m_Device = device;
@@ -50,8 +76,8 @@ void DescriptorManager::SetupStandardDescriptorTables()
 
 uint32_t DescriptorManager::CreateCBV(Buffer* buffer)
 {
-	uint32_t index;
-	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
+	uint32_t index = 0;
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
 
 	if (!m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Allocate(index, cpuHandle))
 	{
@@ -61,8 +87,38 @@ uint32_t DescriptorManager::CreateCBV(Buffer* buffer)
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvViewDesc{};
 	cbvViewDesc.BufferLocation = buffer->GetGpuAddress();
 	cbvViewDesc.SizeInBytes = buffer->GetBufferSize();
-
+	
 	m_Device->CreateConstantBufferView(&cbvViewDesc, cpuHandle);
+	
+	return index;
+}
+
+uint32_t DescriptorManager::CreateRTV(ID3D12Resource* resource, const D3D12_RENDER_TARGET_VIEW_DESC* rtvDesc /*= nullptr*/)
+{
+	uint32_t index = 0;
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
+
+	if (!m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].Allocate(index, cpuHandle))
+	{
+		ENGINE_ERROR("Failed To Allocate RTV Descriptor!!!");
+	}
+
+	m_Device->CreateRenderTargetView(resource, rtvDesc, cpuHandle);
+
+	return index;
+}
+
+uint32_t DescriptorManager::CreateDSV(ID3D12Resource* resource, const D3D12_DEPTH_STENCIL_VIEW_DESC* dsvDesc /*= nullptr*/)
+{
+	uint32_t index = 0;
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
+
+	if (!m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].Allocate(index, cpuHandle))
+	{
+		ENGINE_ERROR("Failed To Allocate DSV Descriptor!!!");
+	}
+
+	m_Device->CreateDepthStencilView(resource, dsvDesc, cpuHandle);
 
 	return index;
 }
@@ -85,7 +141,7 @@ void DescriptorManager::BindDescriptorHeaps(ID3D12GraphicsCommandList* cmdList)
 	ID3D12DescriptorHeap* heaps[] = { m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetDescriptorHeap() };
 	cmdList->SetDescriptorHeaps(_countof(heaps), heaps);
 
-	D3D12_GPU_DESCRIPTOR_HANDLE gpuStart = m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGpuHandle();
+	D3D12_GPU_DESCRIPTOR_HANDLE gpuStart = m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].GetGPUDescriptorHandleForHeapStart();
 
 	// Bind CBV, SRV, UAV Tables vào đúng các slot cuối trong Root Signature
 	cmdList->SetGraphicsRootDescriptorTable(m_TableParamStartIndex, gpuStart);

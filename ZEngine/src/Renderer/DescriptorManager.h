@@ -9,6 +9,9 @@ public:
 	DescriptorManager();
 	~DescriptorManager();
 
+	D3D12_CPU_DESCRIPTOR_HANDLE GetRTVCPUHandle(uint32_t index);
+	D3D12_CPU_DESCRIPTOR_HANDLE GetDSVCPUHandle(uint32_t index);
+
 	bool Init(ID3D12Device* device, uint32_t frameCount);
 
 	// Gọi hàm này sau khi đã đăng ký hết các Root CBV để chốt cấu trúc Root Signature
@@ -19,6 +22,11 @@ public:
 
 	// Quản lý Descriptor Heap (Bindless)
 	uint32_t CreateCBV(Buffer* buffer);
+
+	// Quản lý RTV, DSV DescriptorHeap
+	uint32_t CreateRTV(ID3D12Resource* resource, const D3D12_RENDER_TARGET_VIEW_DESC* rtvDesc = nullptr);
+	uint32_t CreateDSV(ID3D12Resource* resource, const D3D12_DEPTH_STENCIL_VIEW_DESC* dsvDesc = nullptr);
+	
 
 	// Hàm Bind tổng hợp cho mỗi Frame
 	void FrameDescriptorBind(ID3D12GraphicsCommandList* cmdList, int currentFrame);
