@@ -44,6 +44,8 @@ private:
 	ComPtr<ID3D12Resource>			m_DepthBuffer;
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_DepthCpuHandle;
 
+	ComPtr<ID3D12Resource>			m_Texture;
+
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
 	std::unique_ptr<Shader>         m_VS;
@@ -63,4 +65,5 @@ private:
 	void UpdateConstantBuffersData(int currentFrame);
 
 	void InitDepthBuffer();
+	void InitTexture2D();
 };

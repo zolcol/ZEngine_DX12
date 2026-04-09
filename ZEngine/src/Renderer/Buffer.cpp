@@ -68,6 +68,37 @@ void Buffer::UploadData(ID3D12Device* device, CommandContext* commandContext, co
 	ENGINE_ERROR("Buffer Upload Failed: Unsupported HeapType ID: {}", (int)m_HeapType);
 }
 
+ID3D12GraphicsCommandList* Buffer::UpdateDataToTexture(
+	CommandContext* commandContext, 
+	const void* pSrcPixels, ID3D12Resource* dstTexture, 
+	int textureWidth, int textureHeight, int pixelSizeInBytes)
+{
+	if (m_HeapType != D3D12_HEAP_TYPE_UPLOAD)
+	{
+		ENGINE_ERROR("Cant Upload Texture Data By Buffer Not Have Heap Type GPU_UPLOAD");
+		return nullptr;
+	}
+
+	D3D12_SUBRESOURCE_DATA textureData{};
+	textureData.pData = pSrcPixels;
+	textureData.RowPitch = textureWidth * pixelSizeInBytes;
+	textureData.SlicePitch = textureData.RowPitch * textureHeight;
+
+	ID3D12GraphicsCommandList* cmdList = commandContext->BeginImmediateCommand();
+
+	UpdateSubresources(
+		cmdList,
+		dstTexture,
+		m_Buffer.Get(),
+		0,
+		0,
+		1,
+		&textureData
+	);
+	
+	return cmdList;
+}
+
 void Buffer::UploadDataToBuffer(ID3D12Device* device, ID3D12Resource* dstBuffer, const void* srcData, uint32_t uploadSize, uint32_t offset)
 {
 	D3D12_RESOURCE_DESC resourceDesc = dstBuffer->GetDesc();

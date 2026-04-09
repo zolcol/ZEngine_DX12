@@ -15,6 +15,8 @@ public:
 	
 	void UploadData(ID3D12Device* device, CommandContext* commandContext, const void* pSrcData, uint32_t uploadSize, uint32_t offset, D3D12_RESOURCE_STATES afterState);
 
+	ID3D12GraphicsCommandList* UpdateDataToTexture(CommandContext* commandContext, const void* pSrcPixels, ID3D12Resource* dstTexture, int textureWidth, int textureHeight, int pixelSizeInBytes = 4);
+
 	// ==========================================
 	// Getters
 	// ==========================================

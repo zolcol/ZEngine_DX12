@@ -69,6 +69,7 @@
     <ClCompile Include="src\Core\Time.cpp">
       <Filter>src\Core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Core\ImageLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -125,6 +126,7 @@
     <ClInclude Include="src\Core\Time.h">
       <Filter>src\Core</Filter>
     </ClInclude>
+    <ClInclude Include="src\Core\ImageLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

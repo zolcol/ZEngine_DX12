@@ -34,6 +34,7 @@ public:
 	// ==========================================
 	// Xin slot cho View. Các hàm này trả về một Index dùng để Shader truy cập (Bindless).
 	uint32_t CreateCBV(Buffer* buffer);
+	uint32_t CreateSRV(ID3D12Resource* texture, const CD3DX12_SHADER_RESOURCE_VIEW_DESC* srvDesc);
 	uint32_t CreateRTV(ID3D12Resource* resource, const D3D12_RENDER_TARGET_VIEW_DESC* rtvDesc = nullptr);
 	uint32_t CreateDSV(ID3D12Resource* resource, const D3D12_DEPTH_STENCIL_VIEW_DESC* dsvDesc = nullptr);
 	

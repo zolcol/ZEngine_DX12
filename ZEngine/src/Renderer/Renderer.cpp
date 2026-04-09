@@ -12,6 +12,7 @@
 #include "Buffer.h"
 #include "DescriptorManager.h"
 #include <Core/Time.h>
+#include "Core/ImageLoader.h"
 
 
 Renderer::Renderer() = default;
@@ -53,6 +54,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	// Khởi tạo Constant Buffer (Đăng ký Root CBV trước)
 	InitDepthBuffer();
 	InitConstantBuffers();
+	InitTexture2D();
 
 	// 3. Khởi tạo tài nguyên (Geometry)
 	std::vector<VertexData> vertices =
@@ -309,4 +311,54 @@ void Renderer::InitDepthBuffer()
 
 	uint32_t index = m_DescriptorManager->CreateDSV(m_DepthBuffer.Get());
 	m_DepthCpuHandle = m_DescriptorManager->GetDSVCPUHandle(index);
+}
+
+void Renderer::InitTexture2D()
+{
+	ImageData image("Resources/Textures/anime.png");
+
+	// Create Texture Resource
+	CD3DX12_RESOURCE_DESC texDesc;
+	texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, image.width, image.height,
+		1, 0,
+		1, 0,
+		D3D12_RESOURCE_FLAG_NONE,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN
+	);
+
+	CD3DX12_HEAP_PROPERTIES heapProp(D3D12_HEAP_TYPE_DEFAULT);
+
+	CHECK(m_Device->GetDevice()->CreateCommittedResource(
+		&heapProp,
+		D3D12_HEAP_FLAG_NONE,
+		&texDesc, 
+		D3D12_RESOURCE_STATE_COPY_DEST,
+		nullptr,
+		IID_PPV_ARGS(&m_Texture)
+		));
+
+	UINT64 stagingBufferSize = GetRequiredIntermediateSize(m_Texture.Get(), 0, 1);
+
+	Buffer stagingBuffer;
+	stagingBuffer.Init(m_Device->GetDevice(), stagingBufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	ID3D12GraphicsCommandList* cmdList = stagingBuffer.UpdateDataToTexture(m_CommandContext.get(), image.pixels, m_Texture.Get(), image.width, image.height);
+
+	CD3DX12_RESOURCE_BARRIER barrier;
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_Texture.Get(),
+		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+		0,
+		D3D12_RESOURCE_BARRIER_FLAG_NONE
+	);
+
+	cmdList->ResourceBarrier(1, &barrier);
+
+	m_CommandContext->EndImmediateCommand();
+
+	CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(texDesc.Format);
+
+	m_DescriptorManager->CreateSRV(m_Texture.Get(), &srvDesc);
 }

@@ -107,6 +107,18 @@ uint32_t DescriptorManager::CreateCBV(Buffer* buffer)
 	return index;
 }
 
+uint32_t DescriptorManager::CreateSRV(ID3D12Resource* texture, const CD3DX12_SHADER_RESOURCE_VIEW_DESC* srvDesc)
+{
+	uint32_t index = 0;
+	D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle{};
+
+	if (!m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Allocate(index, cpuHandle))
+		ENGINE_ERROR("Failed To Allocate SRV Descriptor!!!");
+
+	m_Device->CreateShaderResourceView(texture, srvDesc, cpuHandle);
+	return index;
+}
+
 uint32_t DescriptorManager::CreateRTV(ID3D12Resource* resource, const D3D12_RENDER_TARGET_VIEW_DESC* rtvDesc)
 {
 	uint32_t index = 0;
