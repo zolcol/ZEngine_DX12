@@ -19,8 +19,11 @@ public:
 	bool Init(ID3D12Device* device, uint32_t frameCount);
 
 	// Đăng ký Root CBV (Tốc độ cao nhất, dùng cho Global Data như Camera/Time)
-	void CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility);
-	void CreateRootCBVPerFrame(const std::vector<Buffer*>& buffers, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility);
+	void CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+	void CreateRootCBVPerFrame(const std::vector<Buffer*>& buffers, UINT baseRegiste, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+
+	// Đăng ký Root Constant 
+	void CreateRootConstants(UINT num32BitValues, UINT shaderRegister, UINT registerSpace = 1, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
 
 	// Gọi hàm này sau cùng để đóng gói 3 bảng Unbound (CBV, SRV, UAV) vào Root Signature
 	void SetupStandardDescriptorTables();
@@ -28,6 +31,8 @@ public:
 	// Cung cấp Layout cho lớp RootSignature
 	const std::vector<CD3DX12_ROOT_PARAMETER1>& GetRootParams() const { return m_RootParams; }
 
+	// Cung cấp Static Sampler cho RootSignature
+	const std::vector<CD3DX12_STATIC_SAMPLER_DESC>& GetStaticSamplers() const { return m_StaticSamplers; }
 
 	// ==========================================
 	// Cấp phát Tài Nguyên (Resource Allocation)
@@ -50,6 +55,7 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDSVCPUHandle(uint32_t index);
 
 private:
+	void InitStaticSamplers();
 	void BindDescriptorHeaps(ID3D12GraphicsCommandList* cmdList);
 
 private:
@@ -66,10 +72,16 @@ private:
 	// ------------------------------------------
 	// Layout tĩnh cho Root Signature
 	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootParams;
+	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootCBVPamrams;
+	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootConstantParams;
+
+	// Static Sampler
+	std::vector<CD3DX12_STATIC_SAMPLER_DESC> m_StaticSamplers;
 	
 	// Các Ranges cho 3 bảng Unbound khổng lồ (Bindless Architecture)
 	CD3DX12_DESCRIPTOR_RANGE1 m_TableRanges[3];
 	uint32_t m_TableParamStartIndex = 0;
+	uint32_t m_CBVParamStartIndex = 0;
 	
 	// ------------------------------------------
 	// Dynamic Data (Per-Frame Values)

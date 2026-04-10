@@ -64,6 +64,7 @@ private:
 	int      m_CurrentBufferIndex = 0;
 	uint64_t m_FenceValue         = 0;
 
+	void InitRootConstants();
 	void InitConstantBuffers();
 	void UpdateConstantBuffersData(int currentFrame);
 

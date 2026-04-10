@@ -15,6 +15,11 @@ bool Device::Init()
 	{
 		ENGINE_ERROR("FAILED TO ENABLE DEBUG LAYER");
 	}
+
+	/*ComPtr<ID3D12Debug1> debugControl1;
+	debugControl.As(&debugControl1);
+	debugControl1->SetEnableGPUBasedValidation(true);*/
+
 #endif // _DEBUG
 
 	CHECK(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, IID_PPV_ARGS(&m_Factory)));

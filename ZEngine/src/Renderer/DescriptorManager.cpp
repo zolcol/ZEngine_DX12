@@ -19,6 +19,9 @@ bool DescriptorManager::Init(ID3D12Device* device, uint32_t frameCount)
 	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_DSV].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
 	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_RTV].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 256);
 
+	// Khởi tạo Static Sampler
+	InitStaticSamplers();
+
 	return true;
 }
 
@@ -31,8 +34,8 @@ void DescriptorManager::CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT sp
 	// 1. Đăng ký Layout
 	CD3DX12_ROOT_PARAMETER1 cbvParam;
 	cbvParam.InitAsConstantBufferView(baseRegister, space, flags, visibility);
-	m_RootParams.push_back(cbvParam);
-
+	m_RootCBVPamrams.push_back(cbvParam);
+	
 	// 2. Vì Buffer này là tĩnh (dùng chung cho mọi frame), copy địa chỉ của nó cho tất cả các slot frame
 	for (auto& frameAddrs : m_RootCBVsAddress)
 	{
@@ -51,7 +54,7 @@ void DescriptorManager::CreateRootCBVPerFrame(const std::vector<Buffer*>& buffer
 	// 1. Đăng ký Layout
 	CD3DX12_ROOT_PARAMETER1 cbvParam;
 	cbvParam.InitAsConstantBufferView(baseRegister, space, flags, visibility);
-	m_RootParams.push_back(cbvParam);
+	m_RootCBVPamrams.push_back(cbvParam);
 
 	// 2. Gán địa chỉ buffer thực tế của từng frame vào slot tương ứng
 	for (size_t i = 0; i < m_FrameCount; ++i)
@@ -60,8 +63,24 @@ void DescriptorManager::CreateRootCBVPerFrame(const std::vector<Buffer*>& buffer
 	}
 }
 
+void DescriptorManager::CreateRootConstants(UINT num32BitValues, UINT shaderRegister, UINT registerSpace, D3D12_SHADER_VISIBILITY visibility)
+{
+	CD3DX12_ROOT_PARAMETER1 rootConstantParams;
+	rootConstantParams.InitAsConstants(num32BitValues, shaderRegister, registerSpace, visibility);
+	m_RootConstantParams.push_back(rootConstantParams);
+}
+
 void DescriptorManager::SetupStandardDescriptorTables()
 {
+	// Vị trí bắt đầu của CBV Param là ngay sau Root Constant Param
+	m_CBVParamStartIndex = m_RootConstantParams.size();
+
+	// Gộp CBV Param và Constant Param vào RootParam chính
+	m_RootParams = m_RootConstantParams;
+	m_RootParams.insert(m_RootParams.end(), m_RootCBVPamrams.begin(), m_RootCBVPamrams.end());
+	m_RootCBVPamrams.clear();
+	m_RootConstantParams.clear();
+
 	// Ghi nhớ lại vị trí bắt đầu của 3 bảng Unbound trong mảng Params
 	m_TableParamStartIndex = static_cast<uint32_t>(m_RootParams.size());
 
@@ -177,11 +196,29 @@ void DescriptorManager::BindDescriptors(ID3D12GraphicsCommandList* cmdList, int 
 	const auto& frameAddresses = m_RootCBVsAddress[currentFrame];
 	for (uint32_t i = 0; i < (uint32_t)frameAddresses.size(); ++i)
 	{
-		cmdList->SetGraphicsRootConstantBufferView(i, frameAddresses[i]);
+		cmdList->SetGraphicsRootConstantBufferView(i + m_CBVParamStartIndex, frameAddresses[i]);
 	}
 
 	// 2. Bind Heaps và 3 bảng Unbound Tables
 	BindDescriptorHeaps(cmdList);
+}
+
+void DescriptorManager::InitStaticSamplers()
+{
+	// Register s0: Linear Wrap (Dùng cho 3D Models, Môi trường)
+	CD3DX12_STATIC_SAMPLER_DESC linearWrap(
+		0, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP
+	);
+
+	// Register s1: Point Clamp (Dùng cho UI, Post-Processing, Pixel Art)
+	CD3DX12_STATIC_SAMPLER_DESC pointClamp(
+		1, D3D12_FILTER_MIN_MAG_MIP_POINT,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP
+	);
+
+	m_StaticSamplers.push_back(linearWrap);
+	m_StaticSamplers.push_back(pointClamp);
 }
 
 void DescriptorManager::BindDescriptorHeaps(ID3D12GraphicsCommandList* cmdList)

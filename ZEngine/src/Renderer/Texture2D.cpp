@@ -15,7 +15,7 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 	CD3DX12_RESOURCE_DESC texDesc;
 	texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 		format, image.width, image.height,
-		1, 0,
+		1, 1,
 		1, 0,
 		D3D12_RESOURCE_FLAG_NONE,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN

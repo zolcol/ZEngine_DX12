@@ -16,14 +16,15 @@ bool RootSignature::Init(ID3D12Device* device, DescriptorManager* descriptorMana
 		featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 	}
 
-	// 2. Lấy toàn bộ danh sách Root Parameters từ DescriptorManager
+	// 2. Lấy toàn bộ danh sách Root Parameters từ DescriptorManager. Lấy Static Sampler từ DescriptorManager.
 	const auto& params = descriptorManager->GetRootParams();
+	const auto& staticSamplers = descriptorManager->GetStaticSamplers();
 
 	// 3. Khởi tạo Root Signature Desc dựa trên danh sách params
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC desc{};
 	desc.Init_1_1(
 		(uint32_t)params.size(), params.data(),
-		0, nullptr,
+		staticSamplers.size(), staticSamplers.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	);
 	
