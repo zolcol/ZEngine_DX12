@@ -164,6 +164,10 @@ dxgi.lib
     <ClCompile Include="src\Renderer\RootSignature.cpp" />
     <ClCompile Include="src\Renderer\Shader.cpp" />
     <ClCompile Include="src\Renderer\Swapchain.cpp" />
+    <ClCompile Include="src\Renderer\Texture.cpp" />
+    <ClCompile Include="src\Renderer\Texture2D.cpp" />
+    <ClCompile Include="src\Renderer\TextureDepth.cpp" />
+    <ClCompile Include="src\Renderer\TextureRenderTarget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h" />
@@ -185,6 +189,10 @@ dxgi.lib
     <ClInclude Include="src\Renderer\RootSignature.h" />
     <ClInclude Include="src\Renderer\Shader.h" />
     <ClInclude Include="src\Renderer\Swapchain.h" />
+    <ClInclude Include="src\Renderer\Texture.h" />
+    <ClInclude Include="src\Renderer\Texture2D.h" />
+    <ClInclude Include="src\Renderer\TextureDepth.h" />
+    <ClInclude Include="src\Renderer\TextureRenderTarget.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

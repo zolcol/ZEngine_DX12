@@ -70,6 +70,10 @@
       <Filter>src\Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Core\ImageLoader.cpp" />
+    <ClCompile Include="src\Renderer\Texture.cpp" />
+    <ClCompile Include="src\Renderer\Texture2D.cpp" />
+    <ClCompile Include="src\Renderer\TextureDepth.cpp" />
+    <ClCompile Include="src\Renderer\TextureRenderTarget.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -127,6 +131,10 @@
       <Filter>src\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\Core\ImageLoader.h" />
+    <ClInclude Include="src\Renderer\Texture.h" />
+    <ClInclude Include="src\Renderer\Texture2D.h" />
+    <ClInclude Include="src\Renderer\TextureDepth.h" />
+    <ClInclude Include="src\Renderer\TextureRenderTarget.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

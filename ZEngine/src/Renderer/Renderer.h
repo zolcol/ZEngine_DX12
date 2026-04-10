@@ -15,6 +15,8 @@ class Shader;
 class PipelineState;
 class Buffer;
 class DescriptorManager;
+class Texture2D;
+class TextureDepth;
 
 class Renderer
 {
@@ -41,10 +43,11 @@ private:
 	std::vector<std::unique_ptr<Buffer>>	m_ConstantBuffers;
 	std::vector<ConstantBufferData>			m_ConstantBuffersData;
 
-	ComPtr<ID3D12Resource>			m_DepthBuffer;
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_DepthCpuHandle;
+	/*ComPtr<ID3D12Resource>			m_DepthBuffer;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_DepthCpuHandle;*/
+	std::unique_ptr<TextureDepth>	m_DepthTexture;
 
-	ComPtr<ID3D12Resource>			m_Texture;
+	std::unique_ptr<Texture2D>		m_Texture;
 
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;

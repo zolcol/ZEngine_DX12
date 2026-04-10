@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TextureRenderTarget.h"
 class DescriptorManager;
 
 struct SwapChainConfig
@@ -34,18 +35,14 @@ public:
 	uint32_t GetCurrentBackBufferIndex() const { return m_Swapchain->GetCurrentBackBufferIndex(); }
 	
 	// Lấy tài nguyên (Texture2D) của một frame cụ thể
-	ID3D12Resource* GetBackBuffer(int currentFrame) const { return m_BackBuffers[currentFrame].Get(); }
+	ID3D12Resource* GetBackBuffer(int currentFrame) const { return m_BackBuffers[currentFrame]->GetResource(); }
 	
 	// Lấy địa chỉ CPU của Render Target để sử dụng cho hàm OMSetRenderTargets
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentRTVCpuHandle() const { return m_BackBuffersRTV[GetCurrentBackBufferIndex()]; }
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCurrentRTVCpuHandle() const { return m_BackBuffers[GetCurrentBackBufferIndex()]->GetRTVCpuHanlde(); }
 
 private:
 	SwapChainConfig m_SwapchainConfig;
 	ComPtr<IDXGISwapChain4> m_Swapchain;
 
-	// Mảng chứa các kết cấu màn hình (Back Buffers)
-	std::vector<ComPtr<ID3D12Resource>> m_BackBuffers;
-	
-	// Lưu sẵn CPU Handle (lấy từ Manager) để truy cập siêu nhanh lúc render
-	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_BackBuffersRTV;
+	std::vector<std::unique_ptr<TextureRenderTarget>> m_BackBuffers;
 };

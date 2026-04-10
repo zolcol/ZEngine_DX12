@@ -13,6 +13,10 @@
 #include "DescriptorManager.h"
 #include <Core/Time.h>
 #include "Core/ImageLoader.h"
+#include "Texture2D.h"
+#include "TextureRenderTarget.h"
+#include "TextureDepth.h"
+
 
 
 Renderer::Renderer() = default;
@@ -155,12 +159,12 @@ void Renderer::BeginFrame()
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
 	commandList->ResourceBarrier(1, &barrier);
-
-	D3D12_CPU_DESCRIPTOR_HANDLE currentRTVCpuHandle = m_Swapchain->GetCurrentRTVCpuHandle();;
+	
 	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f }; // Màu nền tối hơn
-	commandList->OMSetRenderTargets(1, &currentRTVCpuHandle, false, &m_DepthCpuHandle);
-	commandList->ClearRenderTargetView(currentRTVCpuHandle, clearColor, 0, nullptr);
-	commandList->ClearDepthStencilView(m_DepthCpuHandle, D3D12_CLEAR_FLAG_DEPTH, 1, 0, 0, nullptr);
+
+	commandList->OMSetRenderTargets(1, &m_Swapchain->GetCurrentRTVCpuHandle(), false, &m_DepthTexture->GetDSVCpuHandle());
+	commandList->ClearRenderTargetView(m_Swapchain->GetCurrentRTVCpuHandle(), clearColor, 0, nullptr);
+	commandList->ClearDepthStencilView(m_DepthTexture->GetDSVCpuHandle(), D3D12_CLEAR_FLAG_DEPTH, 1, 0, 0, nullptr);
 
 	// Cấu hình Pipeline State
 	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)m_Width, (float)m_Height);
@@ -291,74 +295,17 @@ void Renderer::UpdateConstantBuffersData(int currentFrame)
 
 void Renderer::InitDepthBuffer()
 {
-	CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-
-	CD3DX12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-		DXGI_FORMAT_D32_FLOAT, m_Width, m_Height,
-		1, 0, 1, 0,
-		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN
+	m_DepthTexture = std::make_unique<TextureDepth>();
+	m_DepthTexture->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(),
+		m_Width, m_Height
 	);
-
-	CD3DX12_CLEAR_VALUE clearValue(DXGI_FORMAT_D32_FLOAT, 1, 0);
-	
-	CHECK(m_Device->GetDevice()->CreateCommittedResource(
-		&heapProps, D3D12_HEAP_FLAG_NONE,
-		&resDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&clearValue, 
-		IID_PPV_ARGS(&m_DepthBuffer)
-	));
-
-	uint32_t index = m_DescriptorManager->CreateDSV(m_DepthBuffer.Get());
-	m_DepthCpuHandle = m_DescriptorManager->GetDSVCPUHandle(index);
 }
 
 void Renderer::InitTexture2D()
 {
-	ImageData image("Resources/Textures/anime.png");
+	m_Texture = std::make_unique<Texture2D>();
+	m_Texture->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), "Resources/Textures/anime.png");
 
-	// Create Texture Resource
-	CD3DX12_RESOURCE_DESC texDesc;
-	texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-		DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, image.width, image.height,
-		1, 0,
-		1, 0,
-		D3D12_RESOURCE_FLAG_NONE,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN
-	);
-
-	CD3DX12_HEAP_PROPERTIES heapProp(D3D12_HEAP_TYPE_DEFAULT);
-
-	CHECK(m_Device->GetDevice()->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&texDesc, 
-		D3D12_RESOURCE_STATE_COPY_DEST,
-		nullptr,
-		IID_PPV_ARGS(&m_Texture)
-		));
-
-	UINT64 stagingBufferSize = GetRequiredIntermediateSize(m_Texture.Get(), 0, 1);
-
-	Buffer stagingBuffer;
-	stagingBuffer.Init(m_Device->GetDevice(), stagingBufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-
-	ID3D12GraphicsCommandList* cmdList = stagingBuffer.UpdateDataToTexture(m_CommandContext.get(), image.pixels, m_Texture.Get(), image.width, image.height);
-
-	CD3DX12_RESOURCE_BARRIER barrier;
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_Texture.Get(),
-		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		0,
-		D3D12_RESOURCE_BARRIER_FLAG_NONE
-	);
-
-	cmdList->ResourceBarrier(1, &barrier);
-
-	m_CommandContext->EndImmediateCommand();
-
-	CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(texDesc.Format);
-
-	m_DescriptorManager->CreateSRV(m_Texture.Get(), &srvDesc);
+	TextureRenderTarget rt;
+	rt.Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), 100, 100, DXGI_FORMAT_R8G8B8A8_UNORM);
 }

@@ -32,20 +32,12 @@ void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device, Descri
 	// Nâng cấp interface lên bản 4 để có thêm tính năng
 	tempSwapchain.As(&m_Swapchain);
 
-	// 2. Tạo Render Target Views (RTV) cho các Back Buffers
+	//// 2. Tạo BackBuffer chứa RTV
 	m_BackBuffers.resize(config.frameCount);
-	m_BackBuffersRTV.resize(config.frameCount);
-
 	for (size_t i = 0; i < config.frameCount; i++)
 	{
-		// Lấy resource thực tế từ Swapchain
-		CHECK(m_Swapchain->GetBuffer(i, IID_PPV_ARGS(&m_BackBuffers[i])));
-		
-		// Đăng ký resource này với DescriptorManager để lấy RTV Index
-		int index = descriptorManager->CreateRTV(m_BackBuffers[i].Get());
-		
-		// Lưu lại CPU Handle để dùng siêu nhanh trong BeginFrame
-		m_BackBuffersRTV[i] = descriptorManager->GetRTVCPUHandle(index);
+		m_BackBuffers[i] = std::make_unique<TextureRenderTarget>();
+		m_BackBuffers[i]->Init(descriptorManager, m_Swapchain.Get(), i);
 	}
 
 	ENGINE_INFO("Swapchain Initialized: {}x{}, Buffers: {}", config.width, config.height, config.frameCount);
