@@ -3,7 +3,7 @@ struct VertexInput
     float3 position : POSITION;
     float3 normal   : NORMAL;
     float2 uv       : TEXCOORD;
-    float3 tangent  : TANGENT;
+    float4 tangent  : TANGENT;
 };
 
 struct PixelInput
@@ -11,7 +11,7 @@ struct PixelInput
     float4 position : SV_POSITION;
     float3 normal   : NORMAL;
     float2 uv       : TEXCOORD;
-    float3 tangent  : TANGENT;
+    float4 tangent  : TANGENT;
 };
 
 // Bindless SRV Table
@@ -52,7 +52,9 @@ PixelInput VSMain(VertexInput input)
     // Transform Normal and Tangent to World Space using the 3x3 rotation part of WorldMatrix
     // Note: If non-uniform scaling is applied, an inverse transpose matrix should be used instead
     output.normal = mul(input.normal, (float3x3)WorldMatrix);
-    output.tangent = mul(input.tangent, (float3x3)WorldMatrix);
+    
+    // Transform tangent vector and preserve the tangent sign (w)
+    output.tangent = float4(mul(input.tangent.xyz, (float3x3)WorldMatrix), input.tangent.w);
     
     output.uv = input.uv;
     

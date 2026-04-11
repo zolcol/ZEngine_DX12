@@ -90,21 +90,31 @@ uint32_t ModelManager::InitMaterial(const MaterialLoaderData& materialData)
 {
 	MaterialData material;
 
-	std::string albedoFilePath = materialData.AlbedoFilePath;
-
-	if (m_LoadedFilePaths.contains(albedoFilePath))
+	auto LoadTexture = [&](const std::string& filePath, DXGI_FORMAT format, TextureType type) -> uint32_t
 	{
-		material.albedoSRVIndex = m_LoadedFilePaths[albedoFilePath];
-	}
-	else
-	{
-		std::unique_ptr<Texture2D> albedoTexture = std::make_unique<Texture2D>();
-		albedoTexture->Init(m_Device, m_CommandContext, m_DescriptorManager, albedoFilePath, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+		if (!filePath.empty() && m_LoadedFilePaths.contains(filePath))
+		{
+			return m_LoadedFilePaths[filePath];
+		}
 
-		material.albedoSRVIndex = albedoTexture->GetSRVIndex();
-		m_LoadedFilePaths[albedoFilePath] = albedoTexture->GetSRVIndex();
-		m_Textures.push_back(std::move(albedoTexture));
-	}
+		std::unique_ptr<Texture2D> texture = std::make_unique<Texture2D>();
+		texture->Init(m_Device, m_CommandContext, m_DescriptorManager, filePath, format, type);
+
+		uint32_t srvIndex = texture->GetSRVIndex();
+		
+		if (!filePath.empty())
+		{
+			m_LoadedFilePaths[filePath] = srvIndex;
+		}
+		
+		m_Textures.push_back(std::move(texture));
+		return srvIndex;
+	};
+
+	material.albedoSRVIndex   = LoadTexture(materialData.AlbedoFilePath, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, ALBEDO);
+	material.normalSRVIndex   = LoadTexture(materialData.NormalFilePath, DXGI_FORMAT_R8G8B8A8_UNORM, NORMAL);
+	material.ormSRVIndex      = LoadTexture(materialData.ORMFilePath, DXGI_FORMAT_R8G8B8A8_UNORM, ORM);
+	material.emissiveSRVIndex = LoadTexture(materialData.emissiveFilePath, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, EMISSIVE);
 
 	m_Materials.push_back(material);
 	return m_Materials.size() - 1;

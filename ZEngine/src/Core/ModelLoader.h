@@ -3,6 +3,9 @@
 struct MaterialLoaderData
 {
 	std::string AlbedoFilePath;
+	std::string NormalFilePath;
+	std::string ORMFilePath;
+	std::string emissiveFilePath;
 };
 
 struct MeshLoaderData

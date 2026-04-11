@@ -9,7 +9,10 @@ struct MaterialLoaderData;
 
 struct MaterialData
 {
-	uint32_t albedoSRVIndex;
+	uint32_t albedoSRVIndex;      // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+	uint32_t normalSRVIndex;      // DXGI_FORMAT_R8G8B8A8_UNORM
+	uint32_t ormSRVIndex;         // DXGI_FORMAT_R8G8B8A8_UNORM (Occlusion, Roughness, Metallic)
+	uint32_t emissiveSRVIndex;    // DXGI_FORMAT_R8G8B8A8_UNORM_SRGB (Nếu có)
 };
 
 class ModelManager
@@ -42,8 +45,6 @@ private:
 
 	std::unique_ptr<Buffer> m_VertexBuffer;
 	std::unique_ptr<Buffer> m_IndexBuffer;
-
-
 
 	uint32_t m_CurrentVertexLocation = 0;
 	uint32_t m_CurrentIndexLocation = 0;

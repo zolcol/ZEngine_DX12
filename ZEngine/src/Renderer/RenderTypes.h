@@ -8,7 +8,7 @@ struct VertexData
 	XMFLOAT3 position;   // 12 bytes
 	XMFLOAT3 normal;     // 12 bytes
 	XMFLOAT2 uv;         // 8 bytes
-	XMFLOAT3 tangent;    // 12 bytes
+	XMFLOAT4 tangent;    // 16 bytes
 
 	static std::vector<D3D12_INPUT_ELEMENT_DESC> GetInputElementDesc()
 	{
@@ -27,7 +27,7 @@ struct VertexData
 				  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 
 				  // TANGENT (offset = 32)
-				  { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32,
+				  { "TANGENT", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 32,
 					D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
 	}

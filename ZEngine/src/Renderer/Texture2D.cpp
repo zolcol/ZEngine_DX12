@@ -12,7 +12,18 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 
 	if (!image.pixels)
 	{
-		ENGINE_ERROR("Failed To Load Image At: {} => Load Default Albedo Texture!!!", filePath);
+		std::string pathStr = filePath.empty() ? "Null" : filePath;
+		std::string typeStr;
+		switch (textureType)
+		{
+		case ALBEDO:   typeStr = "ALBEDO"; break;
+		case NORMAL:   typeStr = "NORMAL"; break;
+		case ORM:      typeStr = "ORM"; break;
+		case EMISSIVE: typeStr = "EMISSIVE"; break;
+		default:       typeStr = "UNKNOWN"; break;
+		}
+
+		ENGINE_ERROR("Failed To Load Image At: {} => Load Default {} Texture!!!", pathStr, typeStr);
 		image = ImageData(DEFAULT_TEXTURE_PATH[textureType]);
 	}
 

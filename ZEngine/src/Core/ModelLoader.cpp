@@ -72,10 +72,26 @@ void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>
 			vertex.normal = { mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z };
 		}
 
-		// Tangent (Cần thiết cho Normal Mapping sau này)
+		// Tangent & Bitangent Sign (Dùng cho Normal Mapping)
 		if (mesh->HasTangentsAndBitangents())
 		{
-			vertex.tangent = { mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z };
+			aiVector3D n = mesh->mNormals[i];
+			aiVector3D t = mesh->mTangents[i];
+			aiVector3D b = mesh->mBitangents[i];
+
+			// Tính vector Bitangent từ Normal và Tangent
+			aiVector3D t_cross_n = t ^ n; // Assimp dùng operator ^ cho Cross Product
+
+			// Dot product giữa Bitangent thực tế và vector tính toán để lấy dấu
+			float dot = t_cross_n * b; // Assimp dùng operator * cho Dot Product
+
+			float tangentSign = (dot < 0.0f) ? -1.0f : 1.0f;
+
+			vertex.tangent = { t.x, t.y, t.z, tangentSign };
+		}
+		else
+		{
+			vertex.tangent = { 0.0f, 0.0f, 0.0f, 1.0f };
 		}
 
 		// Texture Coordinates (Using the first UV channel)
@@ -97,37 +113,40 @@ void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>
 		}
 	}
 
-	// 3. Process Material (Albedo)
+	// 3. Process Material
 	if (mesh->mMaterialIndex >= 0)
 	{
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-		aiString texturePath;
 
-		// --- DEBUG LOGGING: In ra tất cả các loại texture mà Assimp tìm thấy ---
-		for (int i = aiTextureType_NONE; i <= aiTextureType_UNKNOWN; ++i)
+		// Lambda helper để thử tìm texture theo danh sách các loại (aiTextureType) ưu tiên
+		auto GetTexturePath = [&](std::initializer_list<aiTextureType> types) -> std::string
 		{
-			if (material->GetTextureCount(static_cast<aiTextureType>(i)) > 0)
+			aiString texturePath;
+			for (auto type : types)
 			{
-				aiString path;
-				material->GetTexture(static_cast<aiTextureType>(i), 0, &path);
+				if (material->GetTexture(type, 0, &texturePath) == aiReturn_SUCCESS)
+				{
+					std::string relativePath = texturePath.C_Str();
+					std::replace(relativePath.begin(), relativePath.end(), '\\', '/');
+					return directory + "/" + relativePath;
+				}
 			}
-		}
-		// -------------------------------------------------------------------------
+			return "";
+		};
 
-		// Kiểm tra PBR Base Color (Thường gặp ở GLTF/GLB) trước, sau đó mới thử Diffuse truyền thống (OBJ/FBX)
-		if (material->GetTexture(aiTextureType_BASE_COLOR, 0, &texturePath) == aiReturn_SUCCESS ||
-			material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == aiReturn_SUCCESS)
-		{
-			std::string relativePath = texturePath.C_Str();
-			
-			// Thay thế toàn bộ dấu gạch chéo ngược '\' thành dấu gạch chéo tới '/' để chuẩn hóa đường dẫn
-			std::replace(relativePath.begin(), relativePath.end(), '\\', '/');
+		// 1. Albedo (Base Color)
+		meshData.material.AlbedoFilePath = GetTexturePath({ aiTextureType_BASE_COLOR, aiTextureType_DIFFUSE });
 
-			// Combine directory and relative path
-			meshData.material.AlbedoFilePath = directory + "/" + relativePath;
-		}
+		// 2. Normal Map (Obj thường dùng HEIGHT hoặc NORMALS)
+		meshData.material.NormalFilePath = GetTexturePath({ aiTextureType_NORMALS, aiTextureType_HEIGHT });
 
-		if (meshData.material.AlbedoFilePath == "")
+		// 3. ORM (Occlusion, Roughness, Metallic) - GLTF thường pack vào UNKNOWN, có khi map vào METALNESS
+		meshData.material.ORMFilePath = GetTexturePath({ aiTextureType_UNKNOWN, aiTextureType_METALNESS, aiTextureType_DIFFUSE_ROUGHNESS });
+
+		// 4. Emissive Map
+		meshData.material.emissiveFilePath = GetTexturePath({ aiTextureType_EMISSIVE });
+
+		if (meshData.material.AlbedoFilePath.empty())
 		{
 			ENGINE_ERROR("Mesh Dont Have Albedo FilePath!!!");
 		}
