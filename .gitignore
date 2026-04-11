@@ -29,3 +29,29 @@ build/
 # B? qua các thu vi?n bên th? ba (External) và NuGet packages
 ZEngine/External/
 packages/
+
+# -------------------------------------------------------------------
+# FILE ASSETS (Hình ?nh & Models)
+# -------------------------------------------------------------------
+
+# Hình ?nh & Textures
+*.png
+*.jpg
+*.jpeg
+*.tga
+*.bmp
+*.dds
+*.hdr
+*.psd
+*.exr
+
+# 3D Models
+*.fbx
+*.gltf
+*.glb
+*.blend
+*.dae
+*.stl
+*.bin
+*.mtl
+# *.obj (Ðã du?c c?u hình b? qua ? ph?n "File biên d?ch" phía trên)

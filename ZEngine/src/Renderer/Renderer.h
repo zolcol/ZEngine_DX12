@@ -17,6 +17,8 @@ class Buffer;
 class DescriptorManager;
 class Texture2D;
 class TextureDepth;
+class ModelManager;
+class Model;
 
 class Renderer
 {
@@ -39,7 +41,7 @@ private:
 
 	// --- Resources ---
 	std::unique_ptr<DescriptorManager>		m_DescriptorManager;
-	std::unique_ptr<Buffer>					m_VertexBuffer;
+	std::unique_ptr<ModelManager>			m_ModelManager;
 	std::vector<std::unique_ptr<Buffer>>	m_ConstantBuffers;
 	std::vector<ConstantBufferData>			m_ConstantBuffersData;
 
@@ -48,6 +50,8 @@ private:
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
 
 	std::unique_ptr<Texture2D>		m_Texture;
+	Model*							m_AnimeModel;
+	Model*							m_TreeModel;
 
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
@@ -70,4 +74,6 @@ private:
 
 	void InitDepthBuffer();
 	void InitTexture2D();
+
+	void InitModel();
 };

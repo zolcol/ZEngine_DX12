@@ -4,6 +4,11 @@
 class CommandContext;
 class DescriptorManager;
 
+enum TextureType
+{
+	ALBEDO,
+};
+
 class Texture2D: public Texture
 {
 public:
@@ -11,7 +16,9 @@ public:
 	~Texture2D() = default;
 
 	bool Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, 
-		const std::string& filePath, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB);
+		const std::string& filePath, DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, TextureType textureType = ALBEDO);
 private:
-
+	const std::string DEFAULT_TEXTURE_PATH[1] = {
+		"Resources/Textures/anime.png"		// Albedo
+	};
 };

@@ -5,11 +5,16 @@
 #include "Buffer.h"
 #include "CommandContext.h"
 
-bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, const std::string& filePath, DXGI_FORMAT format)
+bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, 
+	const std::string& filePath, DXGI_FORMAT format, TextureType textureType)
 {
 	ImageData image(filePath);
 
-	if (!image.pixels) return false;
+	if (!image.pixels)
+	{
+		ENGINE_ERROR("Failed To Load Image At: {} => Load Default Albedo Texture!!!", filePath);
+		image = ImageData(DEFAULT_TEXTURE_PATH[textureType]);
+	}
 
 	// Create Texture Resource
 	CD3DX12_RESOURCE_DESC texDesc;

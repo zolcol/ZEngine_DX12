@@ -2,7 +2,7 @@
 #include <memory>
 
 // Bắt buộc define trước khi include spdlog để lấy được File & Line
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_ERROR
 #include <spdlog/spdlog.h>
 
 class Log

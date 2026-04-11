@@ -74,6 +74,9 @@
     <ClCompile Include="src\Renderer\Texture2D.cpp" />
     <ClCompile Include="src\Renderer\TextureDepth.cpp" />
     <ClCompile Include="src\Renderer\TextureRenderTarget.cpp" />
+    <ClCompile Include="src\Core\Model.cpp" />
+    <ClCompile Include="src\Core\ModelManager.cpp" />
+    <ClCompile Include="src\Core\ModelLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -135,6 +138,9 @@
     <ClInclude Include="src\Renderer\Texture2D.h" />
     <ClInclude Include="src\Renderer\TextureDepth.h" />
     <ClInclude Include="src\Renderer\TextureRenderTarget.h" />
+    <ClInclude Include="src\Core\Model.h" />
+    <ClInclude Include="src\Core\ModelManager.h" />
+    <ClInclude Include="src\Core\ModelLoader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

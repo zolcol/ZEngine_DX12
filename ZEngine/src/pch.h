@@ -22,6 +22,7 @@ using namespace DirectX;
 // STL
 #include <vector>
 #include <string>
+#include <unordered_set>
 #include <memory>
 #include <unordered_map>
 #include <cassert>

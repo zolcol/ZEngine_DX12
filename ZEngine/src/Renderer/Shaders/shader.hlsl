@@ -1,26 +1,29 @@
 struct VertexInput
 {
     float3 position : POSITION;
-    float4 color    : COLOR;
+    float3 normal   : NORMAL;
     float2 uv       : TEXCOORD;
+    float3 tangent  : TANGENT;
 };
 
 struct PixelInput
 {
     float4 position : SV_POSITION;
-    float4 color    : COLOR;
+    float3 normal   : NORMAL;
     float2 uv       : TEXCOORD;
+    float3 tangent  : TANGENT;
 };
 
 // Bindless SRV Table
 Texture2D<float4> GlobalTextures[10000] : register(t0, space0);
 
 // Bindless UAV Table
-RWTexture2D<float4> GlobalRWTextures[] : register(u0, space0);
+RWTexture2D<float4> GlobalRWTextures[10000] : register(u0, space0);
 
 SamplerState LinearWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
 
+// Cbuffer 1: Camera Matrices
 cbuffer TransformBuffer : register(b0, space2)
 {
     float4x4 WorldMatrix;
@@ -28,6 +31,7 @@ cbuffer TransformBuffer : register(b0, space2)
     float4x4 ProjectionMatrix;
 };
 
+// Cbuffer 2: Root Constants (Object Material Data)
 cbuffer MaterialBuffer : register(b0, space1)
 {
     uint TextureID;
@@ -44,7 +48,12 @@ PixelInput VSMain(VertexInput input)
     pos = mul(pos, ProjectionMatrix);
 
     output.position = pos;
-    output.color = input.color;
+    
+    // Transform Normal and Tangent to World Space using the 3x3 rotation part of WorldMatrix
+    // Note: If non-uniform scaling is applied, an inverse transpose matrix should be used instead
+    output.normal = mul(input.normal, (float3x3)WorldMatrix);
+    output.tangent = mul(input.tangent, (float3x3)WorldMatrix);
+    
     output.uv = input.uv;
     
     return output;
@@ -52,6 +61,12 @@ PixelInput VSMain(VertexInput input)
 
 float4 PSMain(PixelInput input) : SV_TARGET
 {
-    float4 texColor = GlobalTextures[TextureID].Sample(LinearWrapSampler, input.uv);
+    // Normals interpolated across the triangle surface must be re-normalized
+    float3 normal = normalize(input.normal);
+    
+    // Sample the color from the bindless texture array using NonUniformResourceIndex for SM 5.1
+    float4 texColor = GlobalTextures[NonUniformResourceIndex(TextureID)].Sample(LinearWrapSampler, input.uv);
+    
+    // Simply output the sampled color for now
     return texColor;
 }

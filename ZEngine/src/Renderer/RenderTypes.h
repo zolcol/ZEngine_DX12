@@ -5,25 +5,30 @@
 
 struct VertexData
 {
-	XMFLOAT3 position;
-	XMFLOAT4 color;
-	XMFLOAT2 uv;
+	XMFLOAT3 position;   // 12 bytes
+	XMFLOAT3 normal;     // 12 bytes
+	XMFLOAT2 uv;         // 8 bytes
+	XMFLOAT3 tangent;    // 12 bytes
 
 	static std::vector<D3D12_INPUT_ELEMENT_DESC> GetInputElementDesc()
 	{
 		return
 		{
-			// POSITION (3 float = 12 bytes)
+			// POSITION (offset = 0)
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,
 			  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 
-			  // COLOR (4 float = 16 bytes), offset = 12 
-			  { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12,
+			  // NORMAL (offset = 12)
+			  { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12,
 				D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 
-				// TEXCOORD (2 float = 8 bytes), offset = 28 (12 + 16)
-				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 28,
-				  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+				// TEXCOORD (offset = 24)
+				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24,
+				  D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+
+				  // TANGENT (offset = 32)
+				  { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32,
+					D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		};
 	}
 };

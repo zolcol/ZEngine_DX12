@@ -16,6 +16,8 @@
 #include "Texture2D.h"
 #include "TextureRenderTarget.h"
 #include "TextureDepth.h"
+#include "Core/ModelManager.h"
+#include "Core/Model.h"
 
 
 
@@ -43,6 +45,10 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_DescriptorManager = std::make_unique<DescriptorManager>();
 	m_DescriptorManager->Init(m_Device->GetDevice(), m_FramesInFlight);
 
+	// Khoi tao Model Manager
+	m_ModelManager = std::make_unique<ModelManager>();
+	m_ModelManager->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get());
+
 	// 2. Cửa sổ hiển thị (Swapchain)
 	SwapChainConfig config{};
 	config.windowHandle = hwnd;
@@ -60,66 +66,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	InitRootConstants();
 	InitConstantBuffers();
 	InitTexture2D();
-
-	// 3. Khởi tạo tài nguyên (Geometry)
-	std::vector<VertexData> vertices =
-	{
-		// Front Face
-		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
-		{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-
-		// Back Face
-		{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-		{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-		{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-
-		// Left Face
-		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-
-		// Right Face
-		{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-		{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-		{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
-		{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-
-		// Top Face
-		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f,  0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
-		{ XMFLOAT3(0.5f,  0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-
-		// Bottom Face
-		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-		{ XMFLOAT3(-0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-		{ XMFLOAT3(0.5f, -0.5f, -0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
-		{ XMFLOAT3(0.5f, -0.5f,  0.5f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) }
-	};
-
-	uint32_t bufferSize = static_cast<uint32_t>(sizeof(VertexData) * vertices.size());
-	m_VertexBuffer = std::make_unique<Buffer>();
-
-	if (!m_VertexBuffer->Init(m_Device->GetDevice(), bufferSize, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON))
-		return false;
-
-	m_VertexBuffer->UploadData(m_Device->GetDevice(), m_CommandContext.get(), vertices.data(), bufferSize, 0, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+	InitModel();
 
 	// Chốt cấu trúc Descriptor Tables (Bindless) sau khi đã có hết các Root CBV
 	m_DescriptorManager->SetupStandardDescriptorTables();
@@ -181,18 +128,38 @@ void Renderer::BeginFrame()
 	m_DescriptorManager->BindDescriptors(commandList, m_CurrentFrame);
 
 	// Bind Vertex Buffer
+	Buffer* vertexBuffer = m_ModelManager->GetVertexBuffer();
 	D3D12_VERTEX_BUFFER_VIEW vbv{};
-	vbv.BufferLocation = m_VertexBuffer->GetGpuAddress();
-	vbv.SizeInBytes = m_VertexBuffer->GetBufferSize();
+	vbv.BufferLocation = vertexBuffer->GetGpuAddress();
+	vbv.SizeInBytes = vertexBuffer->GetBufferSize();
 	vbv.StrideInBytes = sizeof(VertexData);
 	commandList->IASetVertexBuffers(0, 1, &vbv);
-	
+
+	// Bind Index Buffer
+	Buffer* indexBuffer = m_ModelManager->GetIndexBuffer();
+	D3D12_INDEX_BUFFER_VIEW idv{};
+	idv.Format = DXGI_FORMAT_R32_UINT;
+	idv.BufferLocation = indexBuffer->GetGpuAddress();
+	idv.SizeInBytes = indexBuffer->GetBufferSize();
+	commandList->IASetIndexBuffer(&idv);
+
 	//Update ConstantBuffer 
 	UpdateConstantBuffersData(m_CurrentFrame);
-	uint32_t textureIndex = m_Texture->GetSRVIndex();
-	commandList->SetGraphicsRoot32BitConstants(0, 1, &textureIndex, 0);
 
-	commandList->DrawInstanced(36, 1, 0, 0);
+	// Draw Model
+	std::vector<Model*> models = { m_AnimeModel, m_TreeModel };
+	for (const auto* model : models)
+	{
+		if (!model) continue; // Skip if model failed to load
+
+		const auto& meshes = model->GetMeshes();
+		for (const auto& mesh : meshes)
+		{
+			uint32_t textureIndex = m_ModelManager->GetMaterial(mesh.materialIndex).albedoSRVIndex;
+			commandList->SetGraphicsRoot32BitConstants(0, 1, &textureIndex, 0);
+			commandList->DrawIndexedInstanced(mesh.indexCount, 1, mesh.startIndexLocation, mesh.startVertexLocation, 0);
+		}
+	}
 }
 
 void Renderer::EndFrame()
@@ -267,11 +234,13 @@ void Renderer::UpdateConstantBuffersData(int currentFrame)
 	float time = Time::GetTotalTime();
 
 	// 🔹 World (xoay object)
-	XMMATRIX world = XMMatrixRotationY(time);
+	XMMATRIX world;
+	world = XMMatrixScaling(1, 1, 1);
+	world = world * XMMatrixRotationY(time);
 
 	// 🔹 Camera
-	XMVECTOR eye = XMVectorSet(0.0f, 2.0f, -3.0f, 1.0f);
-	XMVECTOR target = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	XMVECTOR eye = XMVectorSet(0.0f, 1.0f, -3.0f, 1.0f);
+	XMVECTOR target = XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
@@ -313,4 +282,10 @@ void Renderer::InitTexture2D()
 {
 	m_Texture = std::make_unique<Texture2D>();
 	m_Texture->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), "Resources/Textures/anime.png");
+}
+
+void Renderer::InitModel()
+{
+	m_AnimeModel = m_ModelManager->InitModel("Resources/Models/Girl/scene.gltf");
+	m_TreeModel = m_ModelManager->InitModel("Resources/Models/Elf/scene.gltf");
 }
