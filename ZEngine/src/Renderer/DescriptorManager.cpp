@@ -34,7 +34,7 @@ void DescriptorManager::CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT sp
 	// 1. Đăng ký Layout
 	CD3DX12_ROOT_PARAMETER1 cbvParam;
 	cbvParam.InitAsConstantBufferView(baseRegister, space, flags, visibility);
-	m_RootCBVPamrams.push_back(cbvParam);
+	m_RootCBVParams.push_back(cbvParam);
 	
 	// 2. Vì Buffer này là tĩnh (dùng chung cho mọi frame), copy địa chỉ của nó cho tất cả các slot frame
 	for (auto& frameAddrs : m_RootCBVsAddress)
@@ -54,13 +54,22 @@ void DescriptorManager::CreateRootCBVPerFrame(const std::vector<Buffer*>& buffer
 	// 1. Đăng ký Layout
 	CD3DX12_ROOT_PARAMETER1 cbvParam;
 	cbvParam.InitAsConstantBufferView(baseRegister, space, flags, visibility);
-	m_RootCBVPamrams.push_back(cbvParam);
+	m_RootCBVParams.push_back(cbvParam);
 
 	// 2. Gán địa chỉ buffer thực tế của từng frame vào slot tương ứng
 	for (size_t i = 0; i < m_FrameCount; ++i)
 	{
 		m_RootCBVsAddress[i].push_back(buffers[i]->GetGpuAddress());
 	}
+}
+
+void DescriptorManager::CreateRootSRV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility /*= D3D12_SHADER_VISIBILITY_ALL*/)
+{
+	CD3DX12_ROOT_PARAMETER1 srvParam;
+	srvParam.InitAsShaderResourceView(baseRegister, space, flags, visibility);
+
+	m_RootSRVParams.push_back(srvParam);
+	m_RootSRVsAddress.push_back(buffer->GetGpuAddress());
 }
 
 void DescriptorManager::CreateRootConstants(UINT num32BitValues, UINT shaderRegister, UINT registerSpace, D3D12_SHADER_VISIBILITY visibility)
@@ -75,10 +84,16 @@ void DescriptorManager::SetupStandardDescriptorTables()
 	// Vị trí bắt đầu của CBV Param là ngay sau Root Constant Param
 	m_CBVParamStartIndex = m_RootConstantParams.size();
 
-	// Gộp CBV Param và Constant Param vào RootParam chính
+	// Vị trí bắt đầu của SRV Param ngay sau CBV Params
+	m_SRVParamStartIndex = m_CBVParamStartIndex + m_RootCBVParams.size();
+
+	// Gộp CBV Param -> SRV Param -> Constant Param vào RootParam chính
 	m_RootParams = m_RootConstantParams;
-	m_RootParams.insert(m_RootParams.end(), m_RootCBVPamrams.begin(), m_RootCBVPamrams.end());
-	m_RootCBVPamrams.clear();
+	m_RootParams.insert(m_RootParams.end(), m_RootCBVParams.begin(), m_RootCBVParams.end());
+	m_RootParams.insert(m_RootParams.end(), m_RootSRVParams.begin(), m_RootSRVParams.end());
+
+	m_RootCBVParams.clear();
+	m_RootSRVParams.clear();
 	m_RootConstantParams.clear();
 
 	// Ghi nhớ lại vị trí bắt đầu của 3 bảng Unbound trong mảng Params
@@ -199,7 +214,13 @@ void DescriptorManager::BindDescriptors(ID3D12GraphicsCommandList* cmdList, int 
 		cmdList->SetGraphicsRootConstantBufferView(i + m_CBVParamStartIndex, frameAddresses[i]);
 	}
 
-	// 2. Bind Heaps và 3 bảng Unbound Tables
+	// 2. Bind nhanh toàn bộ Root SRVs.
+	for (uint32_t i = 0; i < (uint32_t)m_RootSRVsAddress.size(); i++)
+	{
+		cmdList->SetGraphicsRootShaderResourceView(i + m_SRVParamStartIndex, m_RootSRVsAddress[i]);
+	}
+
+	// 3. Bind Heaps và 3 bảng Unbound Tables
 	BindDescriptorHeaps(cmdList);
 }
 

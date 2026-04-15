@@ -65,7 +65,6 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	InitDepthBuffer();
 	InitRootConstants();
 	InitConstantBuffers();
-	InitTexture2D();
 	InitModel();
 
 	// Chốt cấu trúc Descriptor Tables (Bindless) sau khi đã có hết các Root CBV
@@ -147,16 +146,21 @@ void Renderer::BeginFrame()
 	UpdateConstantBuffersData(m_CurrentFrame);
 
 	// Draw Model
+	if (!m_ModelManager->IsMaterialUpdated())
+	{
+		ENGINE_FATAL("Material Data Not Update to GPU!!!");
+		return;
+	}
+
 	std::vector<Model*> models = { m_AnimeModel, m_TreeModel };
 	for (const auto* model : models)
 	{
 		if (!model) continue; // Skip if model failed to load
-
 		const auto& meshes = model->GetMeshes();
 		for (const auto& mesh : meshes)
 		{
-			uint32_t textureIndex = m_ModelManager->GetMaterial(mesh.materialIndex).albedoSRVIndex;
-			commandList->SetGraphicsRoot32BitConstants(0, 1, &textureIndex, 0);
+			uint32_t materialIndex = mesh.materialIndex;
+			commandList->SetGraphicsRoot32BitConstants(0, 1, &materialIndex, 0);
 			commandList->DrawIndexedInstanced(mesh.indexCount, 1, mesh.startIndexLocation, mesh.startVertexLocation, 0);
 		}
 	}
@@ -278,14 +282,10 @@ void Renderer::InitDepthBuffer()
 	);
 }
 
-void Renderer::InitTexture2D()
-{
-	m_Texture = std::make_unique<Texture2D>();
-	m_Texture->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), "Resources/Textures/anime.png");
-}
-
 void Renderer::InitModel()
 {
 	m_AnimeModel = m_ModelManager->InitModel("Resources/Models/Girl/scene.gltf");
 	m_TreeModel = m_ModelManager->InitModel("Resources/Models/Elf/scene.gltf");
+
+	m_ModelManager->UploadMaterialBuffer();
 }

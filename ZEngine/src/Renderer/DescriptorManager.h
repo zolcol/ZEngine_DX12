@@ -21,6 +21,9 @@ public:
 	// Đăng ký Root CBV (Tốc độ cao nhất, dùng cho Global Data như Camera/Time)
 	void CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
 	void CreateRootCBVPerFrame(const std::vector<Buffer*>& buffers, UINT baseRegiste, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+	
+	// Đăng ký Root SRV (Chủ đích hiện tại cho Structured Buffer như Material)
+	void CreateRootSRV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
 
 	// Đăng ký Root Constant 
 	void CreateRootConstants(UINT num32BitValues, UINT shaderRegister, UINT registerSpace = 1, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
@@ -72,7 +75,8 @@ private:
 	// ------------------------------------------
 	// Layout tĩnh cho Root Signature
 	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootParams;
-	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootCBVPamrams;
+	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootCBVParams;
+	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootSRVParams;
 	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootConstantParams;
 
 	// Static Sampler
@@ -82,10 +86,12 @@ private:
 	CD3DX12_DESCRIPTOR_RANGE1 m_TableRanges[3];
 	uint32_t m_TableParamStartIndex = 0;
 	uint32_t m_CBVParamStartIndex = 0;
+	uint32_t m_SRVParamStartIndex = 0;
 	
 	// ------------------------------------------
 	// Dynamic Data (Per-Frame Values)
 	// ------------------------------------------
 	// m_RootCBVsAddress[frameIndex][paramIndex]
 	std::vector<std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_RootCBVsAddress;
+	std::vector<D3D12_GPU_VIRTUAL_ADDRESS>				m_RootSRVsAddress;
 };

@@ -49,7 +49,6 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE		m_DepthCpuHandle;*/
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
 
-	std::unique_ptr<Texture2D>		m_Texture;
 	Model*							m_AnimeModel;
 	Model*							m_TreeModel;
 
@@ -73,7 +72,6 @@ private:
 	void UpdateConstantBuffersData(int currentFrame);
 
 	void InitDepthBuffer();
-	void InitTexture2D();
 
 	void InitModel();
 };

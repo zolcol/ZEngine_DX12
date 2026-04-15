@@ -24,14 +24,20 @@ public:
 	Buffer* GetVertexBuffer() const { return m_VertexBuffer.get(); }
 	Buffer* GetIndexBuffer() const { return m_IndexBuffer.get(); }
 
+	bool IsMaterialUpdated() const { return m_IsMaterialUpdated; }
+
 	MaterialData GetMaterial(uint32_t index) const { return m_Materials[index]; }
 
 	void Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager);
+	void UploadMaterialBuffer();
 	
 	Model* InitModel(const std::string& filePath);
 private:
 	const uint32_t MAX_VERTICES = 500000;
 	const uint32_t MAX_INDICES = 500000;
+	const uint32_t MAX_MATERIALS = 10000;
+
+	bool m_IsMaterialUpdated = false;
 
 	ID3D12Device* m_Device;
 	CommandContext* m_CommandContext;
@@ -45,6 +51,7 @@ private:
 
 	std::unique_ptr<Buffer> m_VertexBuffer;
 	std::unique_ptr<Buffer> m_IndexBuffer;
+	std::unique_ptr<Buffer> m_MaterialBuffer;
 
 	uint32_t m_CurrentVertexLocation = 0;
 	uint32_t m_CurrentIndexLocation = 0;

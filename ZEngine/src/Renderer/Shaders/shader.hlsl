@@ -34,8 +34,19 @@ cbuffer TransformBuffer : register(b0, space2)
 // Cbuffer 2: Root Constants (Object Material Data)
 cbuffer MaterialBuffer : register(b0, space1)
 {
-    uint TextureID;
-}
+    uint MaterialID;
+};
+
+struct MaterialData
+{
+    uint AlbedoTextureID;
+    uint NormalTextureID;
+    uint ORMTextureID;
+    uint EmissiveTextureID;
+};
+
+// Mateial Structured Buffer
+StructuredBuffer<MaterialData> GlobalMaterials : register(t0, space2);
 
 PixelInput VSMain(VertexInput input)
 {
@@ -67,7 +78,8 @@ float4 PSMain(PixelInput input) : SV_TARGET
     float3 normal = normalize(input.normal);
     
     // Sample the color from the bindless texture array using NonUniformResourceIndex for SM 5.1
-    float4 texColor = GlobalTextures[NonUniformResourceIndex(TextureID)].Sample(LinearWrapSampler, input.uv);
+    uint albedoID = GlobalMaterials[MaterialID].AlbedoTextureID;
+    float4 texColor = GlobalTextures[albedoID].Sample(LinearWrapSampler, input.uv);
     
     // Simply output the sampled color for now
     return texColor;

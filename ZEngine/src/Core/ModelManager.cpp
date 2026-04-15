@@ -17,10 +17,25 @@ void ModelManager::Init(ID3D12Device* device, CommandContext* commandContext, De
 
 	m_VertexBuffer = std::make_unique<Buffer>();
 	m_IndexBuffer = std::make_unique<Buffer>();
+	m_MaterialBuffer = std::make_unique<Buffer>();
 
-	m_VertexBuffer->Init(device, sizeof(VertexData) * MAX_VERTICES, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-	m_IndexBuffer->Init(device, sizeof(uint32_t) * MAX_INDICES, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_INDEX_BUFFER);
+	m_VertexBuffer->Init(device, sizeof(VertexData) * MAX_VERTICES, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
+	m_IndexBuffer->Init(device, sizeof(uint32_t) * MAX_INDICES, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
+	m_MaterialBuffer->Init(m_Device, MAX_MATERIALS * sizeof(MaterialData), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
 
+	m_DescriptorManager->CreateRootSRV(m_MaterialBuffer.get(), 0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+}
+
+void ModelManager::UploadMaterialBuffer()
+{
+	if (m_Materials.empty())
+	{
+		return;
+	}
+
+	m_MaterialBuffer->UploadData(m_Device, m_CommandContext, m_Materials.data(), m_Materials.size() * sizeof(MaterialData), 0, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	
+	m_IsMaterialUpdated = true;
 }
 
 Model* ModelManager::InitModel(const std::string& filePath)
@@ -86,6 +101,7 @@ Model* ModelManager::InitModel(const std::string& filePath)
 	return m_Models.back().get();
 }
 
+
 uint32_t ModelManager::InitMaterial(const MaterialLoaderData& materialData)
 {
 	MaterialData material;
@@ -115,7 +131,9 @@ uint32_t ModelManager::InitMaterial(const MaterialLoaderData& materialData)
 	material.normalSRVIndex   = LoadTexture(materialData.NormalFilePath, DXGI_FORMAT_R8G8B8A8_UNORM, NORMAL);
 	material.ormSRVIndex      = LoadTexture(materialData.ORMFilePath, DXGI_FORMAT_R8G8B8A8_UNORM, ORM);
 	material.emissiveSRVIndex = LoadTexture(materialData.emissiveFilePath, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, EMISSIVE);
-
+	
 	m_Materials.push_back(material);
+
+	m_IsMaterialUpdated = false;
 	return m_Materials.size() - 1;
 }
