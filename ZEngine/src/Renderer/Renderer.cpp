@@ -18,6 +18,11 @@
 #include "TextureDepth.h"
 #include "Core/ModelManager.h"
 #include "Core/Model.h"
+#include "Core/Scene.h"
+#include "Core/Entity.h"
+#include "Core/CoreComponent.h"
+#include "Core/RenderComponent.h"
+
 
 
 
@@ -65,7 +70,6 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	InitDepthBuffer();
 	InitRootConstants();
 	InitConstantBuffers();
-	InitModel();
 
 	// Chốt cấu trúc Descriptor Tables (Bindless) sau khi đã có hết các Root CBV
 	m_DescriptorManager->SetupStandardDescriptorTables();
@@ -87,7 +91,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	return true;
 }
 
-void Renderer::BeginFrame()
+void Renderer::BeginFrame(Scene* scene)
 {
 	m_CurrentBufferIndex = m_Swapchain->GetCurrentBackBufferIndex();
 	auto& frameRes = m_CommandContext->GetFrameCommandResource(m_CurrentFrame);
@@ -142,9 +146,6 @@ void Renderer::BeginFrame()
 	idv.SizeInBytes = indexBuffer->GetBufferSize();
 	commandList->IASetIndexBuffer(&idv);
 
-	//Update ConstantBuffer 
-	UpdateConstantBuffersData(m_CurrentFrame);
-
 	// Draw Model
 	if (!m_ModelManager->IsMaterialUpdated())
 	{
@@ -152,21 +153,25 @@ void Renderer::BeginFrame()
 		return;
 	}
 
-	std::vector<Model*> models = { m_AnimeModel, m_TreeModel };
-	for (const auto* model : models)
-	{
-		if (!model) continue; // Skip if model failed to load
-		const auto& meshes = model->GetMeshes();
-		for (const auto& mesh : meshes)
+	scene->GetRegistry().view<MeshComponent, TransformComponent>().each([&](const MeshComponent& mesh, const TransformComponent& transform) 
 		{
-			uint32_t materialIndex = mesh.materialIndex;
-			commandList->SetGraphicsRoot32BitConstants(0, 1, &materialIndex, 0);
-			commandList->DrawIndexedInstanced(mesh.indexCount, 1, mesh.startIndexLocation, mesh.startVertexLocation, 0);
-		}
-	}
+			//Update ConstantBuffer 
+			UpdateConstantBuffersData(m_CurrentFrame, transform);
+
+			const auto* model = mesh.model;
+
+			if (!model) return; // Skip if model failed to load
+			const auto& meshes = model->GetMeshes();
+			for (const auto& mesh : meshes)
+			{
+				uint32_t materialIndex = mesh.materialIndex;
+				commandList->SetGraphicsRoot32BitConstants(0, 1, &materialIndex, 0);
+				commandList->DrawIndexedInstanced(mesh.indexCount, 1, mesh.startIndexLocation, mesh.startVertexLocation, 0);
+			}
+		});
 }
 
-void Renderer::EndFrame()
+void Renderer::EndFrame(Scene* scene)
 {
 	auto& frameRes = m_CommandContext->GetFrameCommandResource(m_CurrentFrame);
 	auto commandList = frameRes.commandList.Get();
@@ -233,15 +238,8 @@ void Renderer::InitConstantBuffers()
 	);
 }
 
-void Renderer::UpdateConstantBuffersData(int currentFrame)
+void Renderer::UpdateConstantBuffersData(int currentFrame, const TransformComponent& transform)
 {
-	float time = Time::GetTotalTime();
-
-	// 🔹 World (xoay object)
-	XMMATRIX world;
-	world = XMMatrixScaling(1, 1, 1);
-	world = world * XMMatrixRotationY(time);
-
 	// 🔹 Camera
 	XMVECTOR eye = XMVectorSet(0.0f, 1.0f, -3.0f, 1.0f);
 	XMVECTOR target = XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
@@ -260,7 +258,7 @@ void Renderer::UpdateConstantBuffersData(int currentFrame)
 	);
 
 	// 🔥 Ghi vào constant buffer (NHỚ transpose)
-	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].WorldMatrix, XMMatrixTranspose(world));
+	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].WorldMatrix, XMMatrixTranspose(transform.GetWorldMatrix()));
 	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ViewMatrix, XMMatrixTranspose(view));
 	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ProjectionMatrix, XMMatrixTranspose(proj));
 
@@ -282,10 +280,3 @@ void Renderer::InitDepthBuffer()
 	);
 }
 
-void Renderer::InitModel()
-{
-	m_AnimeModel = m_ModelManager->InitModel("Resources/Models/Girl/scene.gltf");
-	m_TreeModel = m_ModelManager->InitModel("Resources/Models/Elf/scene.gltf");
-
-	m_ModelManager->UploadMaterialBuffer();
-}

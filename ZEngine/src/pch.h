@@ -28,7 +28,7 @@ using namespace DirectX;
 #include <cassert>
 #include <cstdint>
 #include <iostream>
-
+#include "entt/entt.hpp"
 // Log
 #include "Core/Log.h"
 #include "Renderer/DX12Utils.h"

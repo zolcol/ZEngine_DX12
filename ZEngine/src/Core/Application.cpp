@@ -3,6 +3,7 @@
 
 #include "Window.h"
 #include <Renderer/Renderer.h>
+#include "Scene.h"
 #include "Time.h"
 
 Application::Application() = default;
@@ -11,6 +12,7 @@ Application::~Application() = default;
 
 void Application::Init()
 {
+	// Graphic
 	m_Window = std::make_unique<Window>(WIDTH, HEIGHT, L"ZEngine");
 	m_Window->Show();
 	
@@ -21,9 +23,15 @@ void Application::Init()
 		return;
 	}
 
+	// Scene
+	m_Scene = std::make_unique<Scene>(m_Renderer->GetModelManager());
+	m_Scene->InitModel();
+	// Time
 	Time::Init();
 
 	ENGINE_INFO("Application Initialized Successfully.");
+
+
 }
 
 void Application::Run()
@@ -32,8 +40,10 @@ void Application::Run()
 	{
 		Time::Update();
 
-		m_Renderer->BeginFrame();
-		m_Renderer->EndFrame();
+		m_Scene->Update(Time::GetDeltaTime());
+
+		m_Renderer->BeginFrame(m_Scene.get());
+		m_Renderer->EndFrame(m_Scene.get());
 	}
 }
 

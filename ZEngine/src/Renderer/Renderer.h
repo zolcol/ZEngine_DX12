@@ -1,8 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <cstdint>
-
 // =====================================================================
 // FORWARD DECLARATIONS - Giúp tăng tốc độ biên dịch (Compilation Speed)
 // =====================================================================
@@ -19,6 +16,9 @@ class Texture2D;
 class TextureDepth;
 class ModelManager;
 class Model;
+class Scene;
+class Entity;
+struct TransformComponent;
 
 class Renderer
 {
@@ -26,10 +26,12 @@ public:
 	Renderer();
 	~Renderer();
 
+	ModelManager* GetModelManager() const { return m_ModelManager.get(); }
+
 	bool Init(HWND hwnd, int width, int height, uint32_t frameCount);
 	
-	void BeginFrame();
-	void EndFrame();
+	void BeginFrame(Scene* scene);
+	void EndFrame(Scene* scene);
 	void ShutDown();
 
 private:
@@ -45,12 +47,7 @@ private:
 	std::vector<std::unique_ptr<Buffer>>	m_ConstantBuffers;
 	std::vector<ConstantBufferData>			m_ConstantBuffersData;
 
-	/*ComPtr<ID3D12Resource>			m_DepthBuffer;
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_DepthCpuHandle;*/
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
-
-	Model*							m_AnimeModel;
-	Model*							m_TreeModel;
 
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
@@ -69,9 +66,8 @@ private:
 
 	void InitRootConstants();
 	void InitConstantBuffers();
-	void UpdateConstantBuffersData(int currentFrame);
+	void UpdateConstantBuffersData(int currentFrame, const TransformComponent& transform);
 
 	void InitDepthBuffer();
 
-	void InitModel();
 };
