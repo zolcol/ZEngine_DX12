@@ -34,6 +34,8 @@ public:
 	void EndFrame(Scene* scene);
 	void ShutDown();
 
+	void ConnnetToScene(entt::registry& registry);
+
 private:
 	// --- Infrastructure ---
 	std::unique_ptr<Device>         m_Device;
@@ -46,6 +48,8 @@ private:
 	std::unique_ptr<ModelManager>			m_ModelManager;
 	std::vector<std::unique_ptr<Buffer>>	m_ConstantBuffers;
 	std::vector<ConstantBufferData>			m_ConstantBuffersData;
+	std::vector<std::unique_ptr<Buffer>>	m_ObjectDataBuffers;
+	std::vector<std::vector<ObjectData>>	m_ObjectDatas;
 
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
 
@@ -64,10 +68,17 @@ private:
 	int      m_CurrentBufferIndex = 0;
 	uint64_t m_FenceValue         = 0;
 
+	const uint32_t MAX_OBJECT_DATAS = 100000;
+	uint32_t m_CurrentRenderIndex = 0;
+
 	void InitRootConstants();
 	void InitConstantBuffers();
-	void UpdateConstantBuffersData(int currentFrame, const TransformComponent& transform);
+	void UpdateConstantBuffersData(int currentFrame);
 
 	void InitDepthBuffer();
+	void InitObjectDataBuffers();
+	void UpdateObjectDatas(int currentFrame, Scene* scene);
 
+
+	void OnRenderIndexCreated(entt::registry& registry, entt::entity entity);
 };

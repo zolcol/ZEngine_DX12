@@ -26,8 +26,6 @@ struct TransformComponent
 		// Hàm này sử dụng thứ tự Pitch (trục X), Yaw (trục Y), Roll (trục Z)
 		XMMATRIX matRot = XMMatrixRotationRollPitchYaw(Rotation.x, Rotation.y, Rotation.z);
 
-		
-
 		// 4. Nhân các ma trận theo thứ tự S * R * T
 		return matScale * matRot * matTrans;
 	}

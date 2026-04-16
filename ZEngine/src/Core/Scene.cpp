@@ -4,10 +4,13 @@
 #include "CoreComponent.h"
 #include "ModelManager.h"
 #include "RenderComponent.h"
+#include "Renderer/Renderer.h"
 
 
-Scene::Scene(ModelManager* modelManager) : m_ModelManager(modelManager)
+Scene::Scene(Renderer* renderer)
 {
+	m_ModelManager = renderer->GetModelManager();
+	renderer->ConnnetToScene(m_Registry);
 }
 
 Scene::~Scene() = default;
@@ -29,11 +32,13 @@ void Scene::InitModel()
 
 	m_AnimeGirl.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/Girl/scene.gltf"));
 	m_ElfGirl.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/Elf/scene.gltf"));
+	m_AnimeGirl.AddComponent<RenderIndexComponent>();
+	m_ElfGirl.AddComponent<RenderIndexComponent>();
 
-	m_AnimeGirl.GetComponent<TransformComponent>().Position = { -1, 0, 0 };
+	m_AnimeGirl.GetComponent<TransformComponent>().Position = { -0.5, 0, 0 };
 
-	m_ElfGirl.GetComponent<TransformComponent>().Position = { 1, 0, 0 };
-	m_ElfGirl.GetComponent<TransformComponent>().Rotation = { 0, 0, 0 };
+	m_ElfGirl.GetComponent<TransformComponent>().Position = { 0.5, 0, 0 };
+	m_ElfGirl.GetComponent<TransformComponent>().Rotation = { XM_PIDIV2, 0, 0 };
 	m_ElfGirl.GetComponent<TransformComponent>().Scale = { 0.01, 0.01, 0.01 };
 
 	m_ModelManager->UploadMaterialBuffer();

@@ -24,13 +24,13 @@ void Application::Init()
 	}
 
 	// Scene
-	m_Scene = std::make_unique<Scene>(m_Renderer->GetModelManager());
+	m_Scene = std::make_unique<Scene>(m_Renderer.get());
 	m_Scene->InitModel();
+
 	// Time
 	Time::Init();
 
 	ENGINE_INFO("Application Initialized Successfully.");
-
 
 }
 

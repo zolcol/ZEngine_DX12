@@ -26,15 +26,17 @@ SamplerState PointClampSampler : register(s1);
 // Cbuffer 1: Camera Matrices
 cbuffer TransformBuffer : register(b0, space2)
 {
-    float4x4 WorldMatrix;
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
+    float3   CameraPos;
+    float padding;
 };
 
 // Cbuffer 2: Root Constants (Object Material Data)
 cbuffer MaterialBuffer : register(b0, space1)
 {
     uint MaterialID;
+    uint ObjectRenderID;
 };
 
 struct MaterialData
@@ -45,15 +47,23 @@ struct MaterialData
     uint EmissiveTextureID;
 };
 
+struct ObjectData
+{
+    float4x4 WorldTransformMatrix;
+};
+
 // Mateial Structured Buffer
 StructuredBuffer<MaterialData> GlobalMaterials : register(t0, space2);
+// ObjectData Structured Buffr
+StructuredBuffer<ObjectData> GlobalObjectData : register(t1, space2);
 
 PixelInput VSMain(VertexInput input)
 {
     PixelInput output;
     
     float4 pos = float4(input.position, 1.0f);
-
+    float4x4 WorldMatrix = GlobalObjectData[ObjectRenderID].WorldTransformMatrix;
+    
     pos = mul(pos, WorldMatrix);
     pos = mul(pos, ViewMatrix);
     pos = mul(pos, ProjectionMatrix);

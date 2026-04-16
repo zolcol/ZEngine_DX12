@@ -20,10 +20,13 @@ public:
 
 	// Đăng ký Root CBV (Tốc độ cao nhất, dùng cho Global Data như Camera/Time)
 	void CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
-	void CreateRootCBVPerFrame(const std::vector<Buffer*>& buffers, UINT baseRegiste, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+	void CreateRootCBVPerFrame(const std::vector<std::unique_ptr<Buffer>>& buffers
+		, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
 	
 	// Đăng ký Root SRV (Chủ đích hiện tại cho Structured Buffer như Material)
 	void CreateRootSRV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+	void CreateRootSRVPerFrame(const std::vector<std::unique_ptr<Buffer>>& buffers, 
+		UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
 
 	// Đăng ký Root Constant 
 	void CreateRootConstants(UINT num32BitValues, UINT shaderRegister, UINT registerSpace = 1, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
@@ -93,5 +96,5 @@ private:
 	// ------------------------------------------
 	// m_RootCBVsAddress[frameIndex][paramIndex]
 	std::vector<std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_RootCBVsAddress;
-	std::vector<D3D12_GPU_VIRTUAL_ADDRESS>				m_RootSRVsAddress;
+	std::vector<std::vector<D3D12_GPU_VIRTUAL_ADDRESS>>	m_RootSRVsAddress;
 };

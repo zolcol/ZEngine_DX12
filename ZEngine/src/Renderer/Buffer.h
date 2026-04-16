@@ -11,7 +11,7 @@ public:
 	// ==========================================
 	// Initialization & Core Functionality
 	// ==========================================
-	bool Init(ID3D12Device* device, uint32_t bufferSize, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES initialState);
+	bool Init(ID3D12Device* device, uint32_t bufferSize, D3D12_HEAP_TYPE heapType, D3D12_RESOURCE_STATES initialState = D3D12_RESOURCE_STATE_COMMON);
 	
 	void UploadData(ID3D12Device* device, CommandContext* commandContext, const void* pSrcData, uint32_t uploadSize, uint32_t offset, D3D12_RESOURCE_STATES afterState);
 

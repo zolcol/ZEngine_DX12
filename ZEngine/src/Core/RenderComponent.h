@@ -6,3 +6,8 @@ struct MeshComponent
 {
 	Model* model;
 };
+
+struct RenderIndexComponent
+{
+	uint32_t renderIndex;
+};

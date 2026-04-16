@@ -12,6 +12,7 @@ bool DescriptorManager::Init(ID3D12Device* device, uint32_t frameCount)
 
 	// Chuẩn bị mảng 2 chiều chứa địa chỉ GPU cho từng frame
 	m_RootCBVsAddress.resize(frameCount);
+	m_RootSRVsAddress.resize(frameCount);
 
 	// Khởi tạo các Heap khổng lồ
 	m_Allocators[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV].Init(device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 100000);
@@ -43,7 +44,7 @@ void DescriptorManager::CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT sp
 	}
 }
 
-void DescriptorManager::CreateRootCBVPerFrame(const std::vector<Buffer*>& buffers, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility)
+void DescriptorManager::CreateRootCBVPerFrame(const std::vector<std::unique_ptr<Buffer>>& buffers, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility)
 {
 	if (buffers.size() != m_FrameCount)
 	{
@@ -69,7 +70,31 @@ void DescriptorManager::CreateRootSRV(Buffer* buffer, UINT baseRegister, UINT sp
 	srvParam.InitAsShaderResourceView(baseRegister, space, flags, visibility);
 
 	m_RootSRVParams.push_back(srvParam);
-	m_RootSRVsAddress.push_back(buffer->GetGpuAddress());
+	
+	for (size_t i = 0; i < m_FrameCount; i++)
+	{
+		m_RootSRVsAddress[i].push_back(buffer->GetGpuAddress());
+	}
+}
+
+void DescriptorManager::CreateRootSRVPerFrame(const std::vector<std::unique_ptr<Buffer>>& buffers, 
+	UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility /*= D3D12_SHADER_VISIBILITY_ALL*/)
+{
+	if (buffers.size() != m_FrameCount)
+	{
+		ENGINE_FATAL("CreateRootSRVPerFrame: Buffers size ({}) must match frame count ({})!", buffers.size(), m_FrameCount);
+		return;
+	}
+
+	CD3DX12_ROOT_PARAMETER1 srvParam;
+	srvParam.InitAsShaderResourceView(baseRegister, space, flags, visibility);
+
+	m_RootSRVParams.push_back(srvParam);
+
+	for (size_t i = 0; i < m_FrameCount; i++)
+	{
+		m_RootSRVsAddress[i].push_back(buffers[i]->GetGpuAddress());
+	}
 }
 
 void DescriptorManager::CreateRootConstants(UINT num32BitValues, UINT shaderRegister, UINT registerSpace, D3D12_SHADER_VISIBILITY visibility)
@@ -208,16 +233,17 @@ D3D12_CPU_DESCRIPTOR_HANDLE DescriptorManager::GetDSVCPUHandle(uint32_t index)
 void DescriptorManager::BindDescriptors(ID3D12GraphicsCommandList* cmdList, int currentFrame)
 {
 	// 1. Bind nhanh toàn bộ Root CBVs của frame hiện tại
-	const auto& frameAddresses = m_RootCBVsAddress[currentFrame];
-	for (uint32_t i = 0; i < (uint32_t)frameAddresses.size(); ++i)
+	const auto& frameCBVAddresses = m_RootCBVsAddress[currentFrame];
+	for (uint32_t i = 0; i < (uint32_t)frameCBVAddresses.size(); i++)
 	{
-		cmdList->SetGraphicsRootConstantBufferView(i + m_CBVParamStartIndex, frameAddresses[i]);
+		cmdList->SetGraphicsRootConstantBufferView(i + m_CBVParamStartIndex, frameCBVAddresses[i]);
 	}
 
 	// 2. Bind nhanh toàn bộ Root SRVs.
-	for (uint32_t i = 0; i < (uint32_t)m_RootSRVsAddress.size(); i++)
+	const auto& frameSRVAddresses = m_RootSRVsAddress[currentFrame];
+	for (uint32_t i = 0; i < (uint32_t)frameSRVAddresses.size(); i++)
 	{
-		cmdList->SetGraphicsRootShaderResourceView(i + m_SRVParamStartIndex, m_RootSRVsAddress[i]);
+		cmdList->SetGraphicsRootShaderResourceView(i + m_SRVParamStartIndex, frameSRVAddresses[i]);
 	}
 
 	// 3. Bind Heaps và 3 bảng Unbound Tables

@@ -33,10 +33,15 @@ struct VertexData
 	}
 };
 
-struct ConstantBufferData
+struct alignas(16) ConstantBufferData
 {
-	XMFLOAT4X4 WorldMatrix;
 	XMFLOAT4X4 ViewMatrix;
 	XMFLOAT4X4 ProjectionMatrix;
+	XMFLOAT3   CameraPos;
+	float padding;
 };
 
+struct ObjectData
+{
+	XMMATRIX WorldTransform;
+};

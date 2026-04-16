@@ -70,6 +70,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	InitDepthBuffer();
 	InitRootConstants();
 	InitConstantBuffers();
+	InitObjectDataBuffers();
 
 	// Chốt cấu trúc Descriptor Tables (Bindless) sau khi đã có hết các Root CBV
 	m_DescriptorManager->SetupStandardDescriptorTables();
@@ -152,15 +153,16 @@ void Renderer::BeginFrame(Scene* scene)
 		ENGINE_FATAL("Material Data Not Update to GPU!!!");
 		return;
 	}
-
-	scene->GetRegistry().view<MeshComponent, TransformComponent>().each([&](const MeshComponent& mesh, const TransformComponent& transform) 
+	UpdateConstantBuffersData(m_CurrentFrame);
+	UpdateObjectDatas(m_CurrentFrame, scene);
+	scene->GetRegistry().view<MeshComponent, TransformComponent, RenderIndexComponent>().each([&](const MeshComponent& mesh, const TransformComponent& transform, const RenderIndexComponent& renderID) 
 		{
-			//Update ConstantBuffer 
-			UpdateConstantBuffersData(m_CurrentFrame, transform);
-
 			const auto* model = mesh.model;
 
 			if (!model) return; // Skip if model failed to load
+
+			commandList->SetGraphicsRoot32BitConstants(0, 1, &renderID.renderIndex, 1);
+
 			const auto& meshes = model->GetMeshes();
 			for (const auto& mesh : meshes)
 			{
@@ -209,9 +211,14 @@ void Renderer::ShutDown()
 	}
 }
 
+void Renderer::ConnnetToScene(entt::registry& registry)
+{
+	registry.on_construct<RenderIndexComponent>().connect<&Renderer::OnRenderIndexCreated>(this);
+}
+
 void Renderer::InitRootConstants()
 {
-	m_DescriptorManager->CreateRootConstants(1, 0, 1, D3D12_SHADER_VISIBILITY_ALL);
+	m_DescriptorManager->CreateRootConstants(2, 0, 1, D3D12_SHADER_VISIBILITY_ALL);
 }
 
 void Renderer::InitConstantBuffers()
@@ -219,29 +226,27 @@ void Renderer::InitConstantBuffers()
 	m_ConstantBuffersData.resize(m_FramesInFlight);
 	m_ConstantBuffers.resize(m_FramesInFlight);
 
-	std::vector<Buffer*> buffers;
 	uint32_t bufferSize = (sizeof(ConstantBufferData) + 255) & ~255;
 
 	for (size_t i = 0; i < m_FramesInFlight; i++)
 	{
 		m_ConstantBuffers[i] = std::make_unique<Buffer>();
 		m_ConstantBuffers[i]->Init(m_Device->GetDevice(), bufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-		
-		buffers.push_back(m_ConstantBuffers[i].get());
 	}
 
 	m_DescriptorManager->CreateRootCBVPerFrame(
-		buffers,
+		m_ConstantBuffers,
 		0, 2,
 		D3D12_ROOT_DESCRIPTOR_FLAG_NONE,
 		D3D12_SHADER_VISIBILITY_ALL
 	);
 }
 
-void Renderer::UpdateConstantBuffersData(int currentFrame, const TransformComponent& transform)
+void Renderer::UpdateConstantBuffersData(int currentFrame)
 {
 	// 🔹 Camera
-	XMVECTOR eye = XMVectorSet(0.0f, 1.0f, -3.0f, 1.0f);
+	XMFLOAT3 cameraPos = XMFLOAT3(0, 1, -3);
+	XMVECTOR eye = XMVectorSet(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
 	XMVECTOR target = XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
@@ -258,10 +263,9 @@ void Renderer::UpdateConstantBuffersData(int currentFrame, const TransformCompon
 	);
 
 	// 🔥 Ghi vào constant buffer (NHỚ transpose)
-	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].WorldMatrix, XMMatrixTranspose(transform.GetWorldMatrix()));
+	m_ConstantBuffersData[currentFrame].CameraPos = cameraPos;
 	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ViewMatrix, XMMatrixTranspose(view));
 	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ProjectionMatrix, XMMatrixTranspose(proj));
-
 
 	// Upload To Constant Buffer
 	m_ConstantBuffers[currentFrame]->UploadData(
@@ -278,5 +282,50 @@ void Renderer::InitDepthBuffer()
 	m_DepthTexture->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(),
 		m_Width, m_Height
 	);
+}
+
+void Renderer::InitObjectDataBuffers()
+{
+	m_ObjectDataBuffers.resize(m_FramesInFlight);
+	m_ObjectDatas.resize(m_FramesInFlight);
+
+	for (size_t i = 0; i < m_FramesInFlight; i++)
+	{
+		m_ObjectDatas[i].reserve(MAX_OBJECT_DATAS);
+
+		m_ObjectDataBuffers[i] = std::make_unique<Buffer>();
+		m_ObjectDataBuffers[i]->Init(m_Device->GetDevice(), sizeof(ObjectData) * MAX_OBJECT_DATAS, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_COMMON);
+	}
+	
+	m_DescriptorManager->CreateRootSRVPerFrame(m_ObjectDataBuffers, 1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
+}
+
+void Renderer::UpdateObjectDatas(int currentFrame, Scene* scene)
+{
+	scene->GetRegistry().view<RenderIndexComponent, TransformComponent>().each([&](const RenderIndexComponent& renderIDComp, const TransformComponent& transform)
+		{
+			m_ObjectDatas[currentFrame][renderIDComp.renderIndex].WorldTransform = XMMatrixTranspose(transform.GetWorldMatrix());
+		});
+
+	m_ObjectDataBuffers[currentFrame]->UploadData(m_Device->GetDevice(), m_CommandContext.get(),
+		m_ObjectDatas[currentFrame].data(),
+		m_ObjectDatas[currentFrame].size() * sizeof(ObjectData),
+		0,
+		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
+	);
+}
+
+void Renderer::OnRenderIndexCreated(entt::registry& registry, entt::entity entity)
+{
+	RenderIndexComponent& comp = registry.get<RenderIndexComponent>(entity);
+
+	comp.renderIndex = m_CurrentRenderIndex;
+	m_CurrentRenderIndex += 1;
+
+	for (size_t i = 0; i < m_FramesInFlight; i++)
+	{
+		m_ObjectDatas[i].push_back(ObjectData());
+	}
+	
 }
 
