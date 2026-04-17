@@ -88,6 +88,8 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_PSO = std::make_unique<PipelineState>();
 	m_PSO->Init(m_Device->GetDevice(), *m_RootSign, *m_VS, *m_PS);
 
+	InitImGUI(hwnd);
+
 	ENGINE_INFO("Renderer initialized successfully.");
 	return true;
 }
@@ -106,6 +108,18 @@ void Renderer::BeginFrame(Scene* scene)
 	frameRes.commandAllocator->Reset();
 	commandList->Reset(frameRes.commandAllocator.Get(), nullptr);
 
+	// Khởi tạo ImGui frame mới ở đầu logic frame
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	// TẠO DOCKSPACE TOÀN MÀN HÌNH
+	ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockSpaceFlags);
+
+	// Ví dụ code UI
+	ImGui::ShowDemoWindow();
+
 	// Chỉ định Render Target
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_Swapchain->GetBackBuffer(m_CurrentBufferIndex),
@@ -114,7 +128,7 @@ void Renderer::BeginFrame(Scene* scene)
 	);
 	commandList->ResourceBarrier(1, &barrier);
 	
-	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f }; // Màu nền tối hơn
+	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 
 	commandList->OMSetRenderTargets(1, &m_Swapchain->GetCurrentRTVCpuHandle(), false, &m_DepthTexture->GetDSVCpuHandle());
 	commandList->ClearRenderTargetView(m_Swapchain->GetCurrentRTVCpuHandle(), clearColor, 0, nullptr);
@@ -161,7 +175,7 @@ void Renderer::BeginFrame(Scene* scene)
 		{
 			const auto* model = mesh.model;
 
-			if (!model) return; // Skip if model failed to load
+			if (!model) return;
 
 			commandList->SetGraphicsRoot32BitConstants(0, 1, &renderID.renderIndex, 1);
 
@@ -179,8 +193,11 @@ void Renderer::EndFrame(Scene* scene)
 {
 	auto& frameRes = m_CommandContext->GetFrameCommandResource(m_CurrentFrame);
 	auto commandList = frameRes.commandList.Get();
+
+	// 1. Vẽ ImGui cuối cùng
+	RenderImGui(commandList);
 	
-	// Chuyển trạng thái buffer sang PRESENT để hiển thị
+	// 2. Chuyển trạng thái buffer sang PRESENT để hiển thị
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_Swapchain->GetBackBuffer(m_CurrentBufferIndex),
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
@@ -197,6 +214,15 @@ void Renderer::EndFrame(Scene* scene)
 	// Hiển thị frame
 	CHECK(m_Swapchain->GetSwapchain()->Present(1, 0));
 
+	// Hỗ trợ MultiViewport
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault(nullptr,
+			(void*)m_CommandContext->GetFrameCommandResource(m_CurrentFrame).commandList.Get());
+	}
+
 	// Đồng bộ hóa Frame tiếp theo
 	m_Fence->Signal(m_CommandContext->GetCommandQueue(), ++m_FenceValue);
 	frameRes.fenceValue = m_FenceValue;
@@ -211,6 +237,10 @@ void Renderer::ShutDown()
 	{
 		m_Fence->Flush(m_CommandContext->GetCommandQueue(), m_FenceValue);
 	}
+
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown(); 
+	ImGui::DestroyContext();
 }
 
 void Renderer::ConnnetToScene(entt::registry& registry)
@@ -317,6 +347,44 @@ void Renderer::UpdateObjectDatas(int currentFrame, Scene* scene)
 	);
 }
 
+void Renderer::InitImGUI(HWND hwnd)
+{
+	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	desc.NumDescriptors = 1;
+	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	CHECK(m_Device->GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_ImGuiHeap)));
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; 
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+	
+	ImGui::StyleColorsDark();
+
+	ImGui_ImplWin32_Init(hwnd);
+	ImGui_ImplDX12_Init(
+		m_Device->GetDevice(),
+		m_FramesInFlight,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		m_ImGuiHeap.Get(),
+		m_ImGuiHeap->GetCPUDescriptorHandleForHeapStart(),
+		m_ImGuiHeap->GetGPUDescriptorHandleForHeapStart()
+	);
+
+	io.Fonts->Build();
+}
+
+void Renderer::RenderImGui(ID3D12GraphicsCommandList* commandList)
+{
+	ImGui::Render();
+	ID3D12DescriptorHeap* imguiHeaps[] = { m_ImGuiHeap.Get() };
+	commandList->SetDescriptorHeaps(_countof(imguiHeaps), imguiHeaps);
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+}
+
 void Renderer::OnRenderIndexCreated(entt::registry& registry, entt::entity entity)
 {
 	RenderIndexComponent& comp = registry.get<RenderIndexComponent>(entity);
@@ -330,4 +398,3 @@ void Renderer::OnRenderIndexCreated(entt::registry& registry, entt::entity entit
 	}
 	
 }
-

@@ -15,6 +15,11 @@ using Microsoft::WRL::ComPtr;
 #include <d3dcompiler.h>
 #include <d3dx12.h>
 
+// IMGUI
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
+
 // Math
 #include <DirectXMath.h>
 using namespace DirectX;

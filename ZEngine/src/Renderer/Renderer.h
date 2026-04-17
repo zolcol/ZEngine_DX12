@@ -53,6 +53,8 @@ private:
 
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
 
+	ComPtr<ID3D12DescriptorHeap>	m_ImGuiHeap;
+
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
 	std::unique_ptr<Shader>         m_VS;
@@ -78,6 +80,9 @@ private:
 	void InitDepthBuffer();
 	void InitObjectDataBuffers();
 	void UpdateObjectDatas(int currentFrame, Scene* scene);
+
+	void InitImGUI(HWND hwnd);
+	void RenderImGui(ID3D12GraphicsCommandList* commandList);
 
 
 	void OnRenderIndexCreated(entt::registry& registry, entt::entity entity);
