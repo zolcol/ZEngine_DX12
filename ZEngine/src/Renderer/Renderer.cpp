@@ -108,17 +108,8 @@ void Renderer::BeginFrame(Scene* scene)
 	frameRes.commandAllocator->Reset();
 	commandList->Reset(frameRes.commandAllocator.Get(), nullptr);
 
-	// Khởi tạo ImGui frame mới ở đầu logic frame
-	ImGui_ImplDX12_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-
-	// TẠO DOCKSPACE TOÀN MÀN HÌNH
-	ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
-	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockSpaceFlags);
-
-	// Ví dụ code UI
-	ImGui::ShowDemoWindow();
+	// Render ImGui
+	NewFrameImGui();
 
 	// Chỉ định Render Target
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -375,6 +366,22 @@ void Renderer::InitImGUI(HWND hwnd)
 	);
 
 	io.Fonts->Build();
+}
+
+void Renderer::NewFrameImGui()
+{
+	// Khởi tạo ImGui frame mới ở đầu logic frame
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	// TẠO DOCKSPACE TOÀN MÀN HÌNH
+	ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockSpaceFlags);
+
+	// Ví dụ code UI
+	ImGui::ShowDemoWindow();
+
 }
 
 void Renderer::RenderImGui(ID3D12GraphicsCommandList* commandList)

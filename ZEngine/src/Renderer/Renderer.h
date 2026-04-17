@@ -82,6 +82,7 @@ private:
 	void UpdateObjectDatas(int currentFrame, Scene* scene);
 
 	void InitImGUI(HWND hwnd);
+	void NewFrameImGui();
 	void RenderImGui(ID3D12GraphicsCommandList* commandList);
 
 
