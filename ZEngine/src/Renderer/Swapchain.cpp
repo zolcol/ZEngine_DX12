@@ -3,7 +3,10 @@
 #include "DescriptorManager.h"
 
 Swapchain::Swapchain() = default;
-Swapchain::~Swapchain() = default;
+Swapchain::~Swapchain()
+{
+	CloseHandle(m_WaitableObject);
+};
 
 void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device, DescriptorManager* descriptorManager)
 {
@@ -18,6 +21,7 @@ void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device, Descri
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // Bắt buộc cho DX12 để lật frame mượt mà
 	swapChainDesc.SampleDesc.Count = 1;
+	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
 	// DXGI Factory tạo Swapchain
 	ComPtr<IDXGISwapChain1> tempSwapchain;
@@ -32,6 +36,9 @@ void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device, Descri
 	// Nâng cấp interface lên bản 4 để có thêm tính năng
 	tempSwapchain.As(&m_Swapchain);
 
+	m_Swapchain->SetMaximumFrameLatency(config.frameCount - 1);
+	m_WaitableObject = m_Swapchain->GetFrameLatencyWaitableObject();
+
 	//// 2. Tạo BackBuffer chứa RTV
 	m_BackBuffers.resize(config.frameCount);
 	for (size_t i = 0; i < config.frameCount; i++)
@@ -41,4 +48,9 @@ void Swapchain::Init(const SwapChainConfig& config, ID3D12Device* device, Descri
 	}
 
 	ENGINE_INFO("Swapchain Initialized: {}x{}, Buffers: {}", config.width, config.height, config.frameCount);
+}
+
+void Swapchain::WaitForLatencyWaitableObject()
+{
+	WaitForSingleObject(m_WaitableObject, 1000);
 }

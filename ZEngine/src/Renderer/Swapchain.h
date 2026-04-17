@@ -40,9 +40,13 @@ public:
 	// Lấy địa chỉ CPU của Render Target để sử dụng cho hàm OMSetRenderTargets
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCurrentRTVCpuHandle() const { return m_BackBuffers[GetCurrentBackBufferIndex()]->GetRTVCpuHanlde(); }
 
+	void WaitForLatencyWaitableObject();
+
 private:
 	SwapChainConfig m_SwapchainConfig;
 	ComPtr<IDXGISwapChain4> m_Swapchain;
 
 	std::vector<std::unique_ptr<TextureRenderTarget>> m_BackBuffers;
+
+	HANDLE m_WaitableObject;
 };

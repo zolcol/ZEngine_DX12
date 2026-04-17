@@ -12,7 +12,6 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 
 	if (!image.pixels)
 	{
-		std::string pathStr = filePath.empty() ? "Null" : filePath;
 		std::string typeStr;
 		switch (textureType)
 		{
@@ -23,7 +22,15 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 		default:       typeStr = "UNKNOWN"; break;
 		}
 
-		ENGINE_ERROR("Failed To Load Image At: {} => Load Default {} Texture!!!", pathStr, typeStr);
+		if (filePath.empty())
+		{
+			ENGINE_INFO("No {} texture provided in model. Loading default.", typeStr);
+		}
+		else
+		{
+			ENGINE_ERROR("Failed to find {} texture file at: {}. Loading default.", typeStr, filePath);
+		}
+		
 		image = ImageData(DEFAULT_TEXTURE_PATH[textureType]);
 	}
 

@@ -94,6 +94,8 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 
 void Renderer::BeginFrame(Scene* scene)
 {
+	m_Swapchain->WaitForLatencyWaitableObject();
+
 	m_CurrentBufferIndex = m_Swapchain->GetCurrentBackBufferIndex();
 	auto& frameRes = m_CommandContext->GetFrameCommandResource(m_CurrentFrame);
 	auto commandList = frameRes.commandList.Get();

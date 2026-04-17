@@ -148,7 +148,7 @@ void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>
 
 		if (meshData.material.AlbedoFilePath.empty())
 		{
-			ENGINE_ERROR("Mesh Dont Have Albedo FilePath!!!");
+			ENGINE_INFO("Mesh does not have an Albedo FilePath. Using default.");
 		}
 	}
 

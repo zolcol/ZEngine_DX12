@@ -8,7 +8,7 @@ ImageData::ImageData(const std::string& filePath)
 {
 	pixels = stbi_load(filePath.c_str(), &width, &height, &chanel, 4);
 
-	if (!pixels)
+	if (!pixels && !filePath.empty())
 	{
 		ENGINE_ERROR("Failed To Load Image At: {}", filePath);
 	}
