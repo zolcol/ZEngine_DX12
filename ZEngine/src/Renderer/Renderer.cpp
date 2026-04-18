@@ -22,8 +22,8 @@
 #include "Core/Entity.h"
 #include "Core/CoreComponent.h"
 #include "Core/RenderComponent.h"
-
-
+#include <Core/Application.h>
+#include "Core/Editor.h"
 
 
 Renderer::Renderer() = default;
@@ -88,7 +88,6 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_PSO = std::make_unique<PipelineState>();
 	m_PSO->Init(m_Device->GetDevice(), *m_RootSign, *m_VS, *m_PS);
 
-	InitImGUI(hwnd);
 
 	ENGINE_INFO("Renderer initialized successfully.");
 	return true;
@@ -107,9 +106,6 @@ void Renderer::BeginFrame(Scene* scene)
 
 	frameRes.commandAllocator->Reset();
 	commandList->Reset(frameRes.commandAllocator.Get(), nullptr);
-
-	// Render ImGui
-	NewFrameImGui();
 
 	// Chỉ định Render Target
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -180,13 +176,12 @@ void Renderer::BeginFrame(Scene* scene)
 		});
 }
 
-void Renderer::EndFrame(Scene* scene)
+void Renderer::EndFrame(Scene* scene, Editor* editor)
 {
 	auto& frameRes = m_CommandContext->GetFrameCommandResource(m_CurrentFrame);
 	auto commandList = frameRes.commandList.Get();
 
-	// 1. Vẽ ImGui cuối cùng
-	RenderImGui(commandList);
+	editor->Render(commandList);
 	
 	// 2. Chuyển trạng thái buffer sang PRESENT để hiển thị
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -228,10 +223,6 @@ void Renderer::ShutDown()
 	{
 		m_Fence->Flush(m_CommandContext->GetCommandQueue(), m_FenceValue);
 	}
-
-	ImGui_ImplDX12_Shutdown();
-	ImGui_ImplWin32_Shutdown(); 
-	ImGui::DestroyContext();
 }
 
 void Renderer::ConnnetToScene(entt::registry& registry)
@@ -336,60 +327,6 @@ void Renderer::UpdateObjectDatas(int currentFrame, Scene* scene)
 		0,
 		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
 	);
-}
-
-void Renderer::InitImGUI(HWND hwnd)
-{
-	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	desc.NumDescriptors = 1;
-	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	CHECK(m_Device->GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_ImGuiHeap)));
-
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; 
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-	
-	ImGui::StyleColorsDark();
-
-	ImGui_ImplWin32_Init(hwnd);
-	ImGui_ImplDX12_Init(
-		m_Device->GetDevice(),
-		m_FramesInFlight,
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		m_ImGuiHeap.Get(),
-		m_ImGuiHeap->GetCPUDescriptorHandleForHeapStart(),
-		m_ImGuiHeap->GetGPUDescriptorHandleForHeapStart()
-	);
-
-	io.Fonts->Build();
-}
-
-void Renderer::NewFrameImGui()
-{
-	// Khởi tạo ImGui frame mới ở đầu logic frame
-	ImGui_ImplDX12_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-
-	// TẠO DOCKSPACE TOÀN MÀN HÌNH
-	ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
-	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockSpaceFlags);
-
-	// Ví dụ code UI
-	ImGui::ShowDemoWindow();
-
-}
-
-void Renderer::RenderImGui(ID3D12GraphicsCommandList* commandList)
-{
-	ImGui::Render();
-	ID3D12DescriptorHeap* imguiHeaps[] = { m_ImGuiHeap.Get() };
-	commandList->SetDescriptorHeaps(_countof(imguiHeaps), imguiHeaps);
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 }
 
 void Renderer::OnRenderIndexCreated(entt::registry& registry, entt::entity entity)

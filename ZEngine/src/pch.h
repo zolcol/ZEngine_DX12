@@ -34,6 +34,10 @@ using namespace DirectX;
 #include <cstdint>
 #include <iostream>
 #include "entt/entt.hpp"
+#include <entt/meta/factory.hpp>
+#include <entt/meta/resolve.hpp>
+
+using namespace entt::literals;
 // Log
 #include "Core/Log.h"
 #include "Renderer/DX12Utils.h"

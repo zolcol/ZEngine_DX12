@@ -2,10 +2,16 @@
 #include <string>
 #include <DirectXMath.h>
 #include "Model.h"
+#include "Inspector.h"
 
 struct TagComponent
 {
 	std::string name;
+
+	void Inspect()
+	{
+		Inspector::Property("Name", name);
+	}
 };
 
 struct TransformComponent
@@ -28,5 +34,22 @@ struct TransformComponent
 
 		// 4. Nhân các ma trận theo thứ tự S * R * T
 		return matScale * matRot * matTrans;
+	}
+
+	void Inspect()
+	{
+		Inspector::Property("Position", Position);
+		auto rotDegree = DirectX::XMFLOAT3(
+			DirectX::XMConvertToDegrees(Rotation.x), 
+			DirectX::XMConvertToDegrees(Rotation.y),
+			DirectX::XMConvertToDegrees(Rotation.z)
+		);
+		Inspector::Property("Rotation", rotDegree);
+		Rotation = DirectX::XMFLOAT3(
+			DirectX::XMConvertToRadians(rotDegree.x),
+			DirectX::XMConvertToRadians(rotDegree.y),
+			DirectX::XMConvertToRadians(rotDegree.z)
+		);
+		Inspector::Property("Scale", Scale);
 	}
 };

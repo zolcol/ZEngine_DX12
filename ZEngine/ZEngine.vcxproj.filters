@@ -79,6 +79,9 @@
     <ClCompile Include="src\Core\ModelLoader.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
     <ClCompile Include="src\Core\Entity.cpp" />
+    <ClCompile Include="src\Core\Editor.cpp" />
+    <ClCompile Include="src\Core\UIHelper.cpp" />
+    <ClCompile Include="src\Core\Inspector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -147,6 +150,10 @@
     <ClInclude Include="src\Core\Entity.h" />
     <ClInclude Include="src\Core\CoreComponent.h" />
     <ClInclude Include="src\Core\RenderComponent.h" />
+    <ClInclude Include="src\Core\Editor.h" />
+    <ClInclude Include="src\Core\UIHelper.h" />
+    <ClInclude Include="src\Core\Inspector.h" />
+    <ClInclude Include="src\Core\RegisterEnttMeta.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -3,6 +3,7 @@
 class Window;
 class Renderer;
 class Scene;
+class Editor;
 
 class Application
 {
@@ -21,5 +22,7 @@ private:
 
 	std::unique_ptr<Window> m_Window;
 	std::unique_ptr<Renderer> m_Renderer;
+	std::unique_ptr<Editor>	m_Editor;
 	std::unique_ptr<Scene> m_Scene;
+
 };

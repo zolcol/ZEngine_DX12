@@ -145,8 +145,10 @@ dxgi.lib
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
+    <ClCompile Include="src\Core\Editor.cpp" />
     <ClCompile Include="src\Core\Entity.cpp" />
     <ClCompile Include="src\Core\ImageLoader.cpp" />
+    <ClCompile Include="src\Core\Inspector.cpp" />
     <ClCompile Include="src\Core\Log.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -156,6 +158,7 @@ dxgi.lib
     <ClCompile Include="src\Core\ModelManager.cpp" />
     <ClCompile Include="src\Core\Scene.cpp" />
     <ClCompile Include="src\Core\Time.cpp" />
+    <ClCompile Include="src\Core\UIHelper.cpp" />
     <ClCompile Include="src\Core\Window.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\pch.cpp">
@@ -181,15 +184,19 @@ dxgi.lib
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h" />
     <ClInclude Include="src\Core\CoreComponent.h" />
+    <ClInclude Include="src\Core\Editor.h" />
     <ClInclude Include="src\Core\Entity.h" />
     <ClInclude Include="src\Core\ImageLoader.h" />
+    <ClInclude Include="src\Core\Inspector.h" />
     <ClInclude Include="src\Core\Log.h" />
     <ClInclude Include="src\Core\Model.h" />
     <ClInclude Include="src\Core\ModelLoader.h" />
     <ClInclude Include="src\Core\ModelManager.h" />
+    <ClInclude Include="src\Core\RegisterEnttMeta.h" />
     <ClInclude Include="src\Core\RenderComponent.h" />
     <ClInclude Include="src\Core\Scene.h" />
     <ClInclude Include="src\Core\Time.h" />
+    <ClInclude Include="src\Core\UIHelper.h" />
     <ClInclude Include="src\Core\Window.h" />
     <ClInclude Include="src\pch.h" />
     <ClInclude Include="src\Renderer\Buffer.h" />

@@ -19,6 +19,7 @@ class Model;
 class Scene;
 class Entity;
 struct TransformComponent;
+class Editor;
 
 class Renderer
 {
@@ -26,12 +27,13 @@ public:
 	Renderer();
 	~Renderer();
 
+	Device* GetDevice() const { return m_Device.get(); }
 	ModelManager* GetModelManager() const { return m_ModelManager.get(); }
 
 	bool Init(HWND hwnd, int width, int height, uint32_t frameCount);
 	
 	void BeginFrame(Scene* scene);
-	void EndFrame(Scene* scene);
+	void EndFrame(Scene* scene, Editor* editor);
 	void ShutDown();
 
 	void ConnnetToScene(entt::registry& registry);
@@ -52,8 +54,6 @@ private:
 	std::vector<std::vector<ObjectData>>	m_ObjectDatas;
 
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
-
-	ComPtr<ID3D12DescriptorHeap>	m_ImGuiHeap;
 
 	// --- Pipeline ---
 	std::unique_ptr<RootSignature>  m_RootSign;
@@ -80,11 +80,6 @@ private:
 	void InitDepthBuffer();
 	void InitObjectDataBuffers();
 	void UpdateObjectDatas(int currentFrame, Scene* scene);
-
-	void InitImGUI(HWND hwnd);
-	void NewFrameImGui();
-	void RenderImGui(ID3D12GraphicsCommandList* commandList);
-
 
 	void OnRenderIndexCreated(entt::registry& registry, entt::entity entity);
 };
