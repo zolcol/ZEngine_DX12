@@ -11,3 +11,18 @@ void Inspector::Property(const char* PropName, std::string& value)
 {
 	UIHelper::DrawString(PropName, value);
 }
+
+void Inspector::Property(const char* PropName, float& value, float speed, float min, float max)
+{
+	UIHelper::DrawFloat(PropName, value, speed, min, max);
+}
+
+void Inspector::Property(const char* PropName, int& value, float speed, int min, int max)
+{
+	UIHelper::DrawInt(PropName, value, speed, min, max);
+}
+
+void Inspector::Property(const char* PropName, bool& value)
+{
+	UIHelper::DrawBool(PropName, value);
+}

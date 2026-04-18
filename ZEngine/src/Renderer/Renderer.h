@@ -75,7 +75,7 @@ private:
 
 	void InitRootConstants();
 	void InitConstantBuffers();
-	void UpdateConstantBuffersData(int currentFrame);
+	void UpdateConstantBuffersData(int currentFrame, Scene* scene);
 
 	void InitDepthBuffer();
 	void InitObjectDataBuffers();

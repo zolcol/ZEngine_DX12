@@ -1,4 +1,5 @@
 #pragma once
+#include "EditorCameraController.h"
 
 class Device;
 class Scene;
@@ -19,7 +20,7 @@ public:
 	void Shutdown();
 
 	void BeginFrame();
-	void Update(Scene* scene);
+	void Update(Scene* scene, float dt);
 	void Render(ID3D12GraphicsCommandList* cmdList);
 private:
 	void DrawSceneHierarchy(Scene* scene);
@@ -28,4 +29,6 @@ private:
 	ComPtr<ID3D12DescriptorHeap> m_ImGuiHeap;
 
 	entt::entity m_SelectedEntity = entt::null;
+
+	std::unique_ptr<EditorCameraController> m_CameraController;
 };

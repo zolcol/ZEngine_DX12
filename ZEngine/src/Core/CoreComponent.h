@@ -53,3 +53,39 @@ struct TransformComponent
 		Inspector::Property("Scale", Scale);
 	}
 };
+
+
+struct CameraComponent
+{
+	float FOV = 45.0f;
+	float NearPlane = 0.1f;
+	float FarPlane = 1000.0f;
+
+	bool IsPrimary = true;
+
+	[[nodiscard]] DirectX::XMMATRIX GetViewMatrix(const TransformComponent& transform) const
+	{
+		using namespace DirectX;
+		// Ma trận View là nghịch đảo của ma trận Camera Transform (không tính Scale)
+		XMMATRIX matTrans = XMMatrixTranslation(transform.Position.x, transform.Position.y, transform.Position.z);
+		XMMATRIX matRot = XMMatrixRotationRollPitchYaw(transform.Rotation.x, transform.Rotation.y, transform.Rotation.z);
+
+		XMMATRIX cameraWorld = matRot * matTrans;
+		return XMMatrixInverse(nullptr, cameraWorld);
+	}
+
+	[[nodiscard]] DirectX::XMMATRIX GetProjectionMatrix(float aspectRatio) const
+	{
+		// Chuyển FOV từ độ sang Radian để dùng với XMMatrixPerspectiveFovLH
+		return DirectX::XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(FOV), aspectRatio, NearPlane, FarPlane);
+	}
+
+	void Inspect()
+	{
+		Inspector::Property("FOV", FOV, 0.1f, 1.0f, 120.0f);
+		Inspector::Property("Near Plane", NearPlane, 0.01f, 0.001f, 10.0f);
+		Inspector::Property("Far Plane", FarPlane, 1.0f, 10.0f, 10000.0f);
+
+		Inspector::Property("Is Primary", IsPrimary);
+	}
+};

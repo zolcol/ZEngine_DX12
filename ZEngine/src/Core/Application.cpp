@@ -8,6 +8,7 @@
 #include "Editor.h"
 #include "CoreComponent.h"
 #include "RegisterEnttMeta.h"
+#include "Input.h"
 
 Application::Application() = default;
 
@@ -26,6 +27,8 @@ void Application::Init()
 		return;
 	}
 
+	Input::Init();
+
 	m_Editor = std::make_unique<Editor>();
 	m_Editor->Init(m_Window->GetHWND(), m_Renderer->GetDevice(), FRAME_COUNT);
 
@@ -43,14 +46,18 @@ void Application::Init()
 
 void Application::Run()
 {
-	while (m_Window->ProcessMessages())
+	while (true)
 	{
+		Input::Update(); // 1. Reset Mouse Delta & Update Keys trạng thái của frame cũ
+
+		if (!m_Window->ProcessMessages()) break; // 2. Collect Mouse Delta mới cho frame này
+
 		Time::Update();
 
 		m_Scene->Update(Time::GetDeltaTime());
 
 		m_Editor->BeginFrame();
-		m_Editor->Update(m_Scene.get());
+		m_Editor->Update(m_Scene.get(), Time::GetDeltaTime());
 
 		m_Renderer->BeginFrame(m_Scene.get());
 		m_Renderer->EndFrame(m_Scene.get(), m_Editor.get());

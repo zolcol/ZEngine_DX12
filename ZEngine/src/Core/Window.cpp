@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Window.h"
+#include "Input.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -10,19 +11,29 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	if (ImGui_ImplWin32_WndProcHandler(hwnd, uMsg, wParam, lParam))
 		return true;
 
-	if (uMsg == WM_DESTROY)
+	switch (uMsg)
 	{
+	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
-	}
-	if (uMsg == WM_KEYDOWN)
-	{
+
+	case WM_INPUT:
+		Input::ProcessRawInput(lParam);
+		break;
+
+	case WM_MOUSEWHEEL:
+		Input::SetMouseWheelDelta(static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / WHEEL_DELTA);
+		break;
+
+	case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE)
 		{
 			PostQuitMessage(0);
 			return 0;
 		}
+		break;
 	}
+
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 

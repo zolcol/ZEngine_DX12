@@ -7,6 +7,8 @@
 
 void Editor::Init(HWND hwnd, Device* device, int framesInFlight)
 {
+	m_CameraController = std::make_unique<EditorCameraController>();
+
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	desc.NumDescriptors = 1;
@@ -54,8 +56,10 @@ void Editor::BeginFrame()
 	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockSpaceFlags);
 }
 
-void Editor::Update(Scene* scene)
+void Editor::Update(Scene* scene, float dt)
 {
+	m_CameraController->Update(scene, dt);
+
 	DrawSceneHierarchy(scene);
 	DrawInspector(scene);
 }

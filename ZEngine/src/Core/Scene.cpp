@@ -26,6 +26,9 @@ Entity Scene::CreateEntity(const std::string& name)
 
 void Scene::InitModel()
 {
+	Entity camera = CreateEntity("Main Camera");
+	camera.AddComponent<CameraComponent>();
+	camera.GetComponent<TransformComponent>().Position = { 0.0f, 1.0f, -3.0f };
 
 	Entity m_ElfGirl = CreateEntity("Elf Girl");
 	Entity m_AnimeGirl = CreateEntity("Anime Girl");
@@ -46,8 +49,11 @@ void Scene::InitModel()
 
 void Scene::Update(float dt)
 {
-	m_Registry.view<TransformComponent>().each([=](TransformComponent& transform)
+	m_Registry.view<TransformComponent>().each([=](entt::entity entity, TransformComponent& transform)
 		{
-			transform.Rotation.y += dt;
+			if (!m_Registry.any_of<CameraComponent>(entity))
+			{
+				transform.Rotation.y += dt;
+			}
 		});
 }

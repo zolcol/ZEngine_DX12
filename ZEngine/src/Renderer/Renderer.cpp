@@ -156,7 +156,7 @@ void Renderer::BeginFrame(Scene* scene)
 		ENGINE_FATAL("Material Data Not Update to GPU!!!");
 		return;
 	}
-	UpdateConstantBuffersData(m_CurrentFrame);
+	UpdateConstantBuffersData(m_CurrentFrame, scene);
 	UpdateObjectDatas(m_CurrentFrame, scene);
 	scene->GetRegistry().view<MeshComponent, TransformComponent, RenderIndexComponent>().each([&](const MeshComponent& mesh, const TransformComponent& transform, const RenderIndexComponent& renderID) 
 		{
@@ -256,30 +256,30 @@ void Renderer::InitConstantBuffers()
 	);
 }
 
-void Renderer::UpdateConstantBuffersData(int currentFrame)
+void Renderer::UpdateConstantBuffersData(int currentFrame, Scene* scene)
 {
-	// 🔹 Camera
-	XMFLOAT3 cameraPos = XMFLOAT3(0, 1, -3);
-	XMVECTOR eye = XMVectorSet(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
-	XMVECTOR target = XMVectorSet(0.0f, 1.0f, 0.0f, 1.0f);
-	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMFLOAT3 cameraPos;
+	XMMATRIX viewMatrix = XMMatrixIdentity();
+	XMMATRIX projMaxtrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_Width / m_Height, 0.1f, 1000.0f);
+	bool hasPrimaryCamera = false;
+	
+	scene->GetRegistry().view<TransformComponent, CameraComponent>().each([&](TransformComponent& transform, CameraComponent& camera)
+		{
+			if (camera.IsPrimary && !hasPrimaryCamera)
+			{
+				cameraPos = transform.Position;
+				viewMatrix = camera.GetViewMatrix(transform);
+				projMaxtrix = camera.GetProjectionMatrix((float)m_Width / m_Height);
 
-	XMMATRIX view = XMMatrixLookAtLH(eye, target, up);
-
-	// 🔹 Projection
-	float aspect = (float)m_Width / (float)m_Height;
-
-	XMMATRIX proj = XMMatrixPerspectiveFovLH(
-		XM_PIDIV4,
-		aspect,
-		0.1f,
-		100.0f
+				hasPrimaryCamera = true;
+			}
+		}
 	);
 
 	// 🔥 Ghi vào constant buffer (NHỚ transpose)
 	m_ConstantBuffersData[currentFrame].CameraPos = cameraPos;
-	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ViewMatrix, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ProjectionMatrix, XMMatrixTranspose(proj));
+	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ViewMatrix, XMMatrixTranspose(viewMatrix));
+	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ProjectionMatrix, XMMatrixTranspose(projMaxtrix));
 
 	// Upload To Constant Buffer
 	m_ConstantBuffers[currentFrame]->UploadData(

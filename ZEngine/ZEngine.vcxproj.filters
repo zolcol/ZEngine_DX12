@@ -82,6 +82,8 @@
     <ClCompile Include="src\Core\Editor.cpp" />
     <ClCompile Include="src\Core\UIHelper.cpp" />
     <ClCompile Include="src\Core\Inspector.cpp" />
+    <ClCompile Include="src\Core\EditorCameraController.cpp" />
+    <ClCompile Include="src\Core\Input.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -154,6 +156,8 @@
     <ClInclude Include="src\Core\UIHelper.h" />
     <ClInclude Include="src\Core\Inspector.h" />
     <ClInclude Include="src\Core\RegisterEnttMeta.h" />
+    <ClInclude Include="src\Core\EditorCameraController.h" />
+    <ClInclude Include="src\Core\Input.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

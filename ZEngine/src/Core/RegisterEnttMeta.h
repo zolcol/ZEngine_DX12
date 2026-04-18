@@ -14,4 +14,8 @@ void RegisterMetaData()
 	entt::meta_factory<TransformComponent>{}
 	.custom<EditorComponentInfo>("Transform Component")
 		.func<&TransformComponent::Inspect>("Inspect"_hs);
+
+	entt::meta_factory<CameraComponent>{}
+	.custom<EditorComponentInfo>("Camera Component")
+		.func<&CameraComponent::Inspect>("Inspect"_hs);
 }

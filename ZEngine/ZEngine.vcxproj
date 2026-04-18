@@ -146,8 +146,10 @@ dxgi.lib
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\Editor.cpp" />
+    <ClCompile Include="src\Core\EditorCameraController.cpp" />
     <ClCompile Include="src\Core\Entity.cpp" />
     <ClCompile Include="src\Core\ImageLoader.cpp" />
+    <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Core\Inspector.cpp" />
     <ClCompile Include="src\Core\Log.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -185,8 +187,10 @@ dxgi.lib
     <ClInclude Include="src\Core\Application.h" />
     <ClInclude Include="src\Core\CoreComponent.h" />
     <ClInclude Include="src\Core\Editor.h" />
+    <ClInclude Include="src\Core\EditorCameraController.h" />
     <ClInclude Include="src\Core\Entity.h" />
     <ClInclude Include="src\Core\ImageLoader.h" />
+    <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\Inspector.h" />
     <ClInclude Include="src\Core\Log.h" />
     <ClInclude Include="src\Core\Model.h" />

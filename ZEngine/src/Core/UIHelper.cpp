@@ -124,3 +124,85 @@ void UIHelper::DrawString(const std::string& label, std::string& value, float co
 	ImGui::Separator();
 
 }
+
+void UIHelper::DrawFloat(const std::string& label, float& value, float speed, float min, float max, float columnWidth)
+{
+	ImGui::PushID(label.c_str());
+
+	if (ImGui::BeginTable("##float_table", 2, ImGuiTableFlags_None))
+	{
+		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, columnWidth);
+		ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch);
+
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("%s", label.c_str());
+
+		ImGui::TableSetColumnIndex(1);
+
+		ImGui::PushItemWidth(-FLT_MIN);
+		ImGui::DragFloat("##value", &value, speed, min, max, "%.2f");
+		ImGui::PopItemWidth();
+
+		ImGui::EndTable();
+	}
+
+	ImGui::PopID();
+	ImGui::Separator();
+}
+
+void UIHelper::DrawInt(const std::string& label, int& value, float speed, int min, int max, float columnWidth)
+{
+	ImGui::PushID(label.c_str());
+
+	if (ImGui::BeginTable("##int_table", 2, ImGuiTableFlags_None))
+	{
+		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, columnWidth);
+		ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch);
+
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("%s", label.c_str());
+
+		ImGui::TableSetColumnIndex(1);
+
+		ImGui::PushItemWidth(-FLT_MIN);
+		ImGui::DragInt("##value", &value, speed, min, max);
+		ImGui::PopItemWidth();
+
+		ImGui::EndTable();
+	}
+
+	ImGui::PopID();
+	ImGui::Separator();
+}
+
+void UIHelper::DrawBool(const std::string& label, bool& value, float columnWidth)
+{
+	ImGui::PushID(label.c_str());
+
+	if (ImGui::BeginTable("##bool_table", 2, ImGuiTableFlags_None))
+	{
+		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, columnWidth);
+		ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch);
+
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("%s", label.c_str());
+
+		ImGui::TableSetColumnIndex(1);
+
+		ImGui::Checkbox("##value", &value);
+
+		ImGui::EndTable();
+	}
+
+	ImGui::PopID();
+	ImGui::Separator();
+}

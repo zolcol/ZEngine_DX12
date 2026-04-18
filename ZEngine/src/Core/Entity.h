@@ -11,6 +11,8 @@ public:
 	
 	~Entity() = default;
 
+	operator bool() const { return m_Handle != entt::null; }
+	bool operator!() const { return m_Handle == entt::null; }
 	
 	template<typename T, typename... Args>
 	T& AddComponent(Args&&... args)
