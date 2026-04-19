@@ -17,20 +17,87 @@ struct TagComponent
 struct TransformComponent
 {
 	DirectX::XMFLOAT3 Position{ 0, 0, 0 };
-	DirectX::XMFLOAT3 Rotation{ 0, 0, 0 }; // Cần đảm bảo các giá trị này sử dụng đơn vị Radian
+	DirectX::XMFLOAT4 Rotation{ 0, 0, 0, 1 }; // Quaternion (X, Y, Z, W)
 	DirectX::XMFLOAT3 Scale{ 1, 1, 1 };
+
+	[[nodiscard]] DirectX::XMMATRIX GetRotationMatrix() const
+	{
+		return DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Rotation));
+	}
+
+	[[nodiscard]] DirectX::XMFLOAT3 GetEulerAnglesRadians() const
+	{
+		using namespace DirectX;
+		XMMATRIX mat = GetRotationMatrix();
+		XMFLOAT4X4 m;
+		XMStoreFloat4x4(&m, mat);
+
+		float x, y, z;
+		if (m._32 < 1.0f)
+		{
+			if (m._32 > -1.0f)
+			{
+				x = asin(-m._32);
+				y = atan2(m._31, m._33);
+				z = atan2(m._12, m._22);
+			}
+			else
+			{
+				x = XM_PIDIV2;
+				y = -atan2(-m._13, m._11);
+				z = 0.0f;
+			}
+		}
+		else
+		{
+			x = -XM_PIDIV2;
+			y = atan2(-m._13, m._11);
+			z = 0.0f;
+		}
+		return { x, y, z };
+	}
+
+	[[nodiscard]] DirectX::XMFLOAT3 GetEulerAnglesDegrees() const
+	{
+		using namespace DirectX;
+		auto rad = GetEulerAnglesRadians();
+		return { XMConvertToDegrees(rad.x), XMConvertToDegrees(rad.y), XMConvertToDegrees(rad.z) };
+	}
+
+	void SetEulerAnglesRadians(const DirectX::XMFLOAT3& euler)
+	{
+		using namespace DirectX;
+		XMVECTOR q = XMQuaternionRotationRollPitchYaw(euler.x, euler.y, euler.z);
+		XMStoreFloat4(&Rotation, q);
+	}
+
+	void SetEulerAnglesDegrees(const DirectX::XMFLOAT3& euler)
+	{
+		using namespace DirectX;
+		SetEulerAnglesRadians({ XMConvertToRadians(euler.x), XMConvertToRadians(euler.y), XMConvertToRadians(euler.z) });
+	}
+
+	void Rotate(const DirectX::XMFLOAT3& axis, float angleDegree)
+	{
+		using namespace DirectX;
+		XMVECTOR currentRot = XMLoadFloat4(&Rotation);
+		XMVECTOR axisVec = XMLoadFloat3(&axis);
+		XMVECTOR deltaRot = XMQuaternionRotationAxis(axisVec, XMConvertToRadians(angleDegree));
+		XMVECTOR newRot = XMQuaternionMultiply(currentRot, deltaRot);
+		XMStoreFloat4(&Rotation, newRot);
+	}
 
 	[[nodiscard]] DirectX::XMMATRIX GetWorldMatrix() const
 	{
 		using namespace DirectX;
-		// 3. Ma trận Translation (Vị trí)
-		XMMATRIX matTrans = XMMatrixTranslation(Position.x, Position.y, Position.z);
 		// 1. Ma trận Scale
 		XMMATRIX matScale = XMMatrixScaling(Scale.x, Scale.y, Scale.z);
 
-		// 2. Ma trận Rotation 
-		// Hàm này sử dụng thứ tự Pitch (trục X), Yaw (trục Y), Roll (trục Z)
-		XMMATRIX matRot = XMMatrixRotationRollPitchYaw(Rotation.x, Rotation.y, Rotation.z);
+		// 2. Ma trận Rotation
+		XMMATRIX matRot = GetRotationMatrix();
+
+		// 3. Ma trận Translation (Vị trí)
+		XMMATRIX matTrans = XMMatrixTranslation(Position.x, Position.y, Position.z);
 
 		// 4. Nhân các ma trận theo thứ tự S * R * T
 		return matScale * matRot * matTrans;
@@ -39,17 +106,11 @@ struct TransformComponent
 	void Inspect()
 	{
 		Inspector::Property("Position", Position);
-		auto rotDegree = DirectX::XMFLOAT3(
-			DirectX::XMConvertToDegrees(Rotation.x), 
-			DirectX::XMConvertToDegrees(Rotation.y),
-			DirectX::XMConvertToDegrees(Rotation.z)
-		);
+		
+		auto rotDegree = GetEulerAnglesDegrees();
 		Inspector::Property("Rotation", rotDegree);
-		Rotation = DirectX::XMFLOAT3(
-			DirectX::XMConvertToRadians(rotDegree.x),
-			DirectX::XMConvertToRadians(rotDegree.y),
-			DirectX::XMConvertToRadians(rotDegree.z)
-		);
+		SetEulerAnglesDegrees(rotDegree);
+		
 		Inspector::Property("Scale", Scale);
 	}
 };
@@ -68,7 +129,7 @@ struct CameraComponent
 		using namespace DirectX;
 		// Ma trận View là nghịch đảo của ma trận Camera Transform (không tính Scale)
 		XMMATRIX matTrans = XMMatrixTranslation(transform.Position.x, transform.Position.y, transform.Position.z);
-		XMMATRIX matRot = XMMatrixRotationRollPitchYaw(transform.Rotation.x, transform.Rotation.y, transform.Rotation.z);
+		XMMATRIX matRot = transform.GetRotationMatrix();
 
 		XMMATRIX cameraWorld = matRot * matTrans;
 		return XMMatrixInverse(nullptr, cameraWorld);
@@ -159,12 +220,8 @@ struct GPULightData
 		Range = light.Range;
 		Type = (int)light.Type;
 
-		// 👉 Tính direction từ Euler rotation (radian)
-		XMMATRIX rotMatrix = XMMatrixRotationRollPitchYaw(
-			transform.Rotation.x,
-			transform.Rotation.y,
-			transform.Rotation.z
-		);
+		// 👉 Tính direction từ quaternion rotation
+		XMMATRIX rotMatrix = transform.GetRotationMatrix();
 
 		// Forward mặc định là (0,0,1)
 		XMVECTOR forward = XMVector3TransformNormal(

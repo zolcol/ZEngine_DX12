@@ -13,7 +13,12 @@ void EditorCameraController::Update(Scene* scene, float dt)
 		if (!camera.IsPrimary) return;
 
 		// 1. XOAY CAMERA MƯỢT (Damping Rotation)
-		if (Input::IsMouseButtonPressed(0))
+		bool isRightMousePressed = Input::IsMouseButtonPressed(1);
+		
+		// KHÔNG cho phép xoay/di chuyển nếu đang dùng Gizmo
+		if (ImGuizmo::IsUsing()) isRightMousePressed = false;
+
+		if (isRightMousePressed)
 		{
 			XMFLOAT2 mouseDelta = Input::GetMouseDelta();
 			// Nạp vận tốc mục tiêu dựa trên delta chuột
@@ -33,28 +38,41 @@ void EditorCameraController::Update(Scene* scene, float dt)
 		}
 
 		// Áp dụng vận tốc xoay vào transform
-		transform.Rotation.y += m_LookVelocity.x * dt;
-		transform.Rotation.x += m_LookVelocity.y * dt;
+		auto euler = transform.GetEulerAnglesRadians();
+		if (m_LookVelocity.x * m_LookVelocity.x + m_LookVelocity.y * m_LookVelocity.y > 0.000001f)
+		{
+			euler.y += m_LookVelocity.x * dt;
+			euler.x += m_LookVelocity.y * dt;
 
-		// Giới hạn Pitch
-		if (transform.Rotation.x > MAX_PITCH) transform.Rotation.x = MAX_PITCH;
-		if (transform.Rotation.x < -MAX_PITCH) transform.Rotation.x = -MAX_PITCH;
-
+			// Giới hạn Pitch
+			if (euler.x > MAX_PITCH) euler.x = MAX_PITCH;
+			if (euler.x < -MAX_PITCH) euler.x = -MAX_PITCH;
+			
+			transform.SetEulerAnglesRadians(euler);
+		}
+		else
+		{
+			m_LookVelocity = { 0.0f, 0.0f };
+		}
 
 		// 2. DI CHUYỂN MƯỢT (Damping Movement)
-		XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(transform.Rotation.x, transform.Rotation.y, 0);
+		XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(euler.x, euler.y, 0);
 		XMVECTOR forward = XMVector3TransformCoord(XMVectorSet(0, 0, 1, 0), rotationMatrix);
 		XMVECTOR right = XMVector3TransformCoord(XMVectorSet(1, 0, 0, 0), rotationMatrix);
 		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 
 		XMVECTOR moveInput = XMVectorZero();
 
-		if (Input::IsKeyPressed('W')) moveInput += forward;
-		if (Input::IsKeyPressed('S')) moveInput -= forward;
-		if (Input::IsKeyPressed('A')) moveInput -= right;
-		if (Input::IsKeyPressed('D')) moveInput += right;
-		if (Input::IsKeyPressed(VK_SHIFT)) moveInput -= up;
-		if (Input::IsKeyPressed(VK_SPACE)) moveInput += up;
+		// CHỈ NHẬN DI CHUYỂN KHI ĐANG GIỮ CHUỘT PHẢI
+		if (isRightMousePressed)
+		{
+			if (Input::IsKeyPressed('W')) moveInput += forward;
+			if (Input::IsKeyPressed('S')) moveInput -= forward;
+			if (Input::IsKeyPressed('A')) moveInput -= right;
+			if (Input::IsKeyPressed('D')) moveInput += right;
+			if (Input::IsKeyPressed(VK_SHIFT)) moveInput -= up;
+			if (Input::IsKeyPressed(VK_SPACE)) moveInput += up;
+		}
 
 		float currentSpeed = m_MoveSpeed;
 		if (Input::IsKeyPressed(VK_CONTROL)) currentSpeed *= 3.0f;

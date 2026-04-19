@@ -55,7 +55,7 @@ void Scene::Update(float dt)
 		{
 			if (!m_Registry.any_of<CameraComponent>(entity) && !m_Registry.any_of<LightComponent>(entity))
 			{
-				//transform.Rotation.y += dt;
+				//transform.Rotate({ 0.0f, 1.0f, 0.0f }, dt * 50.0f);
 			}
 		});
 }

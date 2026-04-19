@@ -25,10 +25,12 @@ public:
 private:
 	void DrawSceneHierarchy(Scene* scene);
 	void DrawInspector(Scene* scene);
+	void DrawGizmo(Scene* scene);
 
 	ComPtr<ID3D12DescriptorHeap> m_ImGuiHeap;
 
 	entt::entity m_SelectedEntity = entt::null;
+	int m_GizmoOperation = 7; // Mặc định là TRANSLATE (thường là 7)
 
 	std::unique_ptr<EditorCameraController> m_CameraController;
 };

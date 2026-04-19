@@ -4,6 +4,7 @@
 #include "Scene.h"
 #include "CoreComponent.h"
 #include "UIHelper.h"
+#include "Input.h"
 
 void Editor::Init(HWND hwnd, Device* device, int framesInFlight)
 {
@@ -50,6 +51,7 @@ void Editor::BeginFrame()
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
+	ImGuizmo::BeginFrame();
 
 	// TẠO DOCKSPACE TOÀN MÀN HÌNH
 	ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_PassthruCentralNode;
@@ -60,8 +62,74 @@ void Editor::Update(Scene* scene, float dt)
 {
 	m_CameraController->Update(scene, dt);
 
+	// Phím tắt cho Gizmo: W (Dịch), E (Xoay), R (Thu phóng)
+	if (!Input::IsMouseButtonPressed(1)) // Không đổi mode Gizmo nếu đang giữ chuột phải để lái Camera
+	{
+		if (Input::IsKeyPressed('W')) m_GizmoOperation = ImGuizmo::TRANSLATE;
+		if (Input::IsKeyPressed('E')) m_GizmoOperation = ImGuizmo::ROTATE;
+		if (Input::IsKeyPressed('R')) m_GizmoOperation = ImGuizmo::SCALE;
+	}
+
 	DrawSceneHierarchy(scene);
 	DrawInspector(scene);
+	DrawGizmo(scene);
+}
+
+void Editor::DrawGizmo(Scene* scene)
+{
+	if (m_SelectedEntity == entt::null) return;
+
+	auto& registry = scene->GetRegistry();
+	auto* transform = registry.try_get<TransformComponent>(m_SelectedEntity);
+	if (!transform) return;
+
+	// 1. Lấy ma trận View và Projection
+	DirectX::XMMATRIX viewMatrix, projMatrix;
+	bool hasCamera = false;
+	float aspectRatio = ImGui::GetIO().DisplaySize.x / ImGui::GetIO().DisplaySize.y;
+
+	registry.view<TransformComponent, CameraComponent>().each([&](auto& camTransform, auto& camera) {
+		if (camera.IsPrimary && !hasCamera) {
+			viewMatrix = camera.GetViewMatrix(camTransform);
+			projMatrix = camera.GetProjectionMatrix(aspectRatio);
+			hasCamera = true;
+		}
+	});
+
+	if (!hasCamera) return;
+
+	// 2. Cấu hình ImGuizmo để vẽ lên Foreground (đè lên toàn bộ màn hình)
+	ImGuizmo::SetOrthographic(false);
+	ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());
+	
+	// Đảm bảo vùng vẽ bao phủ toàn bộ cửa sổ ứng dụng
+	float windowWidth = ImGui::GetIO().DisplaySize.x;
+	float windowHeight = ImGui::GetIO().DisplaySize.y;
+	ImGuizmo::SetRect(0, 0, windowWidth, windowHeight);
+
+	// 3. Chuẩn bị ma trận
+	float view[16], proj[16], model[16];
+	DirectX::XMStoreFloat4x4((DirectX::XMFLOAT4X4*)view, viewMatrix);
+	DirectX::XMMATRIX perspectiveProj = projMatrix;
+	DirectX::XMStoreFloat4x4((DirectX::XMFLOAT4X4*)proj, perspectiveProj);
+
+	// Lấy ma trận Model trực tiếp từ Transform
+	DirectX::XMMATRIX modelMatrix = transform->GetWorldMatrix();
+	DirectX::XMStoreFloat4x4((DirectX::XMFLOAT4X4*)model, modelMatrix);
+
+	// 4. Vẽ Gizmo
+	ImGuizmo::Manipulate(view, proj, (ImGuizmo::OPERATION)m_GizmoOperation, ImGuizmo::LOCAL, model);
+
+	if (ImGuizmo::IsUsing())
+	{
+		DirectX::XMMATRIX manipulatedMatrix = DirectX::XMLoadFloat4x4((DirectX::XMFLOAT4X4*)model);
+		DirectX::XMVECTOR scale, rotQuat, trans;
+		DirectX::XMMatrixDecompose(&scale, &rotQuat, &trans, manipulatedMatrix);
+		
+		DirectX::XMStoreFloat3(&transform->Position, trans);
+		DirectX::XMStoreFloat4(&transform->Rotation, rotQuat);
+		DirectX::XMStoreFloat3(&transform->Scale, scale);
+	}
 }
 
 void Editor::DrawSceneHierarchy(Scene* scene)
