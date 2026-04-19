@@ -20,6 +20,7 @@ class Scene;
 class Entity;
 struct TransformComponent;
 class Editor;
+struct GPULightData;
 
 class Renderer
 {
@@ -46,12 +47,17 @@ private:
 	std::unique_ptr<Fence>          m_Fence;
 
 	// --- Resources ---
-	std::unique_ptr<DescriptorManager>		m_DescriptorManager;
-	std::unique_ptr<ModelManager>			m_ModelManager;
-	std::vector<std::unique_ptr<Buffer>>	m_ConstantBuffers;
-	std::vector<ConstantBufferData>			m_ConstantBuffersData;
-	std::vector<std::unique_ptr<Buffer>>	m_ObjectDataBuffers;
-	std::vector<std::vector<ObjectData>>	m_ObjectDatas;
+	std::unique_ptr<DescriptorManager>			m_DescriptorManager;
+	std::unique_ptr<ModelManager>				m_ModelManager;
+	std::vector<std::unique_ptr<Buffer>>		m_ConstantBuffers;
+	std::vector<ConstantBufferData>				m_ConstantBuffersData;
+	std::vector<std::unique_ptr<Buffer>>		m_ObjectDataBuffers;
+	std::vector<std::vector<ObjectData>>		m_ObjectDatas;
+
+	// Light
+	uint32_t									m_FrameLightCount = 0;
+	std::vector<std::vector<GPULightData>>		m_LightDatas;
+	std::vector<std::unique_ptr<Buffer>>		m_LightDataBuffers;
 
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
 
@@ -71,6 +77,7 @@ private:
 	uint64_t m_FenceValue         = 0;
 
 	const uint32_t MAX_OBJECT_DATAS = 100000;
+	const uint32_t MAX_LIGHT_OBJECT = 10000;
 	uint32_t m_CurrentRenderIndex = 0;
 
 	void InitRootConstants();
@@ -80,6 +87,9 @@ private:
 	void InitDepthBuffer();
 	void InitObjectDataBuffers();
 	void UpdateObjectDatas(int currentFrame, Scene* scene);
+
+	void InitLightBuffers();
+	void UpdateLightBuffers(int currentFrame, Scene* scene);
 
 	void OnRenderIndexCreated(entt::registry& registry, entt::entity entity);
 };

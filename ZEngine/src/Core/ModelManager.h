@@ -31,7 +31,9 @@ public:
 	void Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager);
 	void UploadMaterialBuffer();
 	
-	Model* InitModel(const std::string& filePath);
+	Model* InitModel(const std::string& filePath, 
+		DirectX::XMFLOAT3 scale = { 1, 1, 1 }, 
+		DirectX::XMFLOAT3 rotation = { 0, 0, 0 });
 private:
 	const uint32_t MAX_VERTICES = 500000;
 	const uint32_t MAX_INDICES = 500000;

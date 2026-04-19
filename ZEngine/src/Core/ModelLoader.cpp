@@ -6,13 +6,24 @@
 #include <iostream>
 
 // Forward declarations for recursive functions
-void ProcessNode(aiNode* node, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory);
-void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory);
+void ProcessNode(aiNode* node, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory, const DirectX::XMMATRIX& bakeMatrix);
+void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory, const DirectX::XMMATRIX& bakeMatrix);
 
-std::vector<MeshLoaderData> LoadModel(const std::string& filePath)
+std::vector<MeshLoaderData> LoadModel(const std::string& filePath, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation)
 {
 	std::vector<MeshLoaderData> meshes;
 	Assimp::Importer importer;
+
+	// Tính toán Ma trận Bake (Nướng) 
+	using namespace DirectX;
+	
+	// Chuyển đổi từ ĐỘ sang RADIAN để dùng cho hàm XMMatrixRotationRollPitchYaw
+	XMMATRIX bakeMatrix = XMMatrixScaling(scale.x, scale.y, scale.z) *
+		XMMatrixRotationRollPitchYaw(
+			XMConvertToRadians(rotation.x), 
+			XMConvertToRadians(rotation.y), 
+			XMConvertToRadians(rotation.z)
+		);
 
 	// Flags optimized for rendering pipelines (Triangulation, Left-Handed system, Tangents)
 	const aiScene* scene = importer.ReadFile(filePath,
@@ -29,29 +40,30 @@ std::vector<MeshLoaderData> LoadModel(const std::string& filePath)
 	// Extract directory to resolve relative texture paths
 	std::string directory = filePath.substr(0, filePath.find_last_of("/\\"));
 
-	ProcessNode(scene->mRootNode, scene, meshes, directory);
+	ProcessNode(scene->mRootNode, scene, meshes, directory, bakeMatrix);
 
 	return meshes;
 }
 
-void ProcessNode(aiNode* node, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory)
+void ProcessNode(aiNode* node, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory, const DirectX::XMMATRIX& bakeMatrix)
 {
 	// Process all meshes in the current node
 	for (unsigned int i = 0; i < node->mNumMeshes; i++)
 	{
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-		ProcessMesh(mesh, scene, meshes, directory);
+		ProcessMesh(mesh, scene, meshes, directory, bakeMatrix);
 	}
 
 	// Recursively process child nodes
 	for (unsigned int i = 0; i < node->mNumChildren; i++)
 	{
-		ProcessNode(node->mChildren[i], scene, meshes, directory);
+		ProcessNode(node->mChildren[i], scene, meshes, directory, bakeMatrix);
 	}
 }
 
-void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory)
+void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>& meshes, const std::string& directory, const DirectX::XMMATRIX& bakeMatrix)
 {
+	using namespace DirectX;
 	MeshLoaderData meshData;
 
 	// Pre-allocate memory to avoid reallocation overhead
@@ -61,33 +73,37 @@ void ProcessMesh(aiMesh* mesh, const aiScene* scene, std::vector<MeshLoaderData>
 	// 1. Process Vertices
 	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 	{
-		VertexData vertex{}; // Assumes a default constructor is available
+		VertexData vertex{};
 
-		// Position
-		vertex.position = { mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z };
+		// --- BAKE POSITION ---
+		XMVECTOR pos = XMVectorSet(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z, 1.0f);
+		pos = XMVector3TransformCoord(pos, bakeMatrix); // TransformCoord áp dụng đầy đủ Translation/Rotation/Scale
+		XMStoreFloat3(&vertex.position, pos);
 
-		// Normal
+		// --- BAKE NORMAL ---
 		if (mesh->HasNormals())
 		{
-			vertex.normal = { mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z };
+			XMVECTOR normal = XMVectorSet(mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z, 0.0f);
+			normal = XMVector3Normalize(XMVector3TransformNormal(normal, bakeMatrix)); // TransformNormal chỉ áp dụng Rotation/Scale
+			XMStoreFloat3(&vertex.normal, normal);
 		}
 
-		// Tangent & Bitangent Sign (Dùng cho Normal Mapping)
+		// --- BAKE TANGENT ---
 		if (mesh->HasTangentsAndBitangents())
 		{
+			XMVECTOR tangent = XMVectorSet(mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z, 0.0f);
+			tangent = XMVector3Normalize(XMVector3TransformNormal(tangent, bakeMatrix));
+			
+			// Xử lý bitangent sign
 			aiVector3D n = mesh->mNormals[i];
 			aiVector3D t = mesh->mTangents[i];
 			aiVector3D b = mesh->mBitangents[i];
-
-			// Tính vector Bitangent từ Normal và Tangent
-			aiVector3D t_cross_n = t ^ n; // Assimp dùng operator ^ cho Cross Product
-
-			// Dot product giữa Bitangent thực tế và vector tính toán để lấy dấu
-			float dot = t_cross_n * b; // Assimp dùng operator * cho Dot Product
-
+			aiVector3D t_cross_n = t ^ n;
+			float dot = t_cross_n * b;
 			float tangentSign = (dot < 0.0f) ? -1.0f : 1.0f;
 
-			vertex.tangent = { t.x, t.y, t.z, tangentSign };
+			XMStoreFloat3((XMFLOAT3*)&vertex.tangent, tangent);
+			vertex.tangent.w = tangentSign;
 		}
 		else
 		{

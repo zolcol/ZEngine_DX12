@@ -71,6 +71,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	InitRootConstants();
 	InitConstantBuffers();
 	InitObjectDataBuffers();
+	InitLightBuffers();
 
 	// Chốt cấu trúc Descriptor Tables (Bindless) sau khi đã có hết các Root CBV
 	m_DescriptorManager->SetupStandardDescriptorTables();
@@ -158,6 +159,10 @@ void Renderer::BeginFrame(Scene* scene)
 	}
 	UpdateConstantBuffersData(m_CurrentFrame, scene);
 	UpdateObjectDatas(m_CurrentFrame, scene);
+	UpdateLightBuffers(m_CurrentFrame, scene);
+
+	commandList->SetGraphicsRoot32BitConstants(0, 1, &m_FrameLightCount, 2);
+
 	scene->GetRegistry().view<MeshComponent, TransformComponent, RenderIndexComponent>().each([&](const MeshComponent& mesh, const TransformComponent& transform, const RenderIndexComponent& renderID) 
 		{
 			const auto* model = mesh.model;
@@ -232,7 +237,7 @@ void Renderer::ConnnetToScene(entt::registry& registry)
 
 void Renderer::InitRootConstants()
 {
-	m_DescriptorManager->CreateRootConstants(2, 0, 1, D3D12_SHADER_VISIBILITY_ALL);
+	m_DescriptorManager->CreateRootConstants(3, 0, 1, D3D12_SHADER_VISIBILITY_ALL);
 }
 
 void Renderer::InitConstantBuffers()
@@ -326,6 +331,45 @@ void Renderer::UpdateObjectDatas(int currentFrame, Scene* scene)
 		m_ObjectDatas[currentFrame].size() * sizeof(ObjectData),
 		0,
 		D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE
+	);
+}
+
+void Renderer::InitLightBuffers()
+{
+	m_LightDatas.resize(m_FramesInFlight);
+	m_LightDataBuffers.resize(m_FramesInFlight);
+
+	for (size_t i = 0; i < m_FramesInFlight; i++)
+	{
+		m_LightDatas[i].reserve(MAX_LIGHT_OBJECT);
+
+		m_LightDataBuffers[i] = std::make_unique<Buffer>();
+		m_LightDataBuffers[i]->Init(m_Device->GetDevice(), sizeof(GPULightData) * MAX_LIGHT_OBJECT, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_COMMON);
+	}
+
+	m_DescriptorManager->CreateRootSRVPerFrame(m_LightDataBuffers, 2, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+}
+
+void Renderer::UpdateLightBuffers(int currentFrame, Scene* scene)
+{
+	m_FrameLightCount = 0;
+
+	scene->GetRegistry().view<LightComponent, TransformComponent>().each([&](const LightComponent& lightData, const TransformComponent& transform)
+		{
+
+			GPULightData gpuLight(lightData, transform);
+			m_LightDatas[currentFrame][m_FrameLightCount] = gpuLight;
+
+			m_FrameLightCount += 1;
+		}
+	);
+
+	m_LightDataBuffers[currentFrame]->UploadData(
+		m_Device->GetDevice(), m_CommandContext.get(),
+		m_LightDatas[currentFrame].data(),
+		m_FrameLightCount * sizeof(GPULightData),
+		0,
+		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 	);
 }
 

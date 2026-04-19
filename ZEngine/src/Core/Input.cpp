@@ -45,15 +45,53 @@ void Input::Update()
 
 bool Input::IsKeyPressed(int keyCode)
 {
+	if (ImGui::GetCurrentContext())
+	{
+		// Chỉ chặn phím khi người dùng đang thực sự gõ chữ vào một ô InputText
+		if (ImGui::GetIO().WantTextInput)
+			return false;
+		
+		// Nếu đang giữ chuột phải (để xoay cam), ưu tiên cho Engine, không cho ImGui chiếm phím
+		if (ImGui::GetIO().WantCaptureKeyboard && !IsMouseButtonPressed(1))
+			return false;
+	}
+
 	if (keyCode < 0 || keyCode >= 256) return false;
 	return s_CurrentKeys[keyCode];
 }
 
 bool Input::IsMouseButtonPressed(int button)
 {
+	// Nếu chuột đang nằm trên một cửa sổ ImGui, đừng gửi click cho Engine
+	// NHƯNG nếu đã lỡ nhấn giữ từ trước (đang rotate), thì vẫn tiếp tục nhận
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse && !ImGui::IsMouseDown(button))
+		return false;
+
 	// 0: Left, 1: Right, 2: Middle
 	int vKey = (button == 0) ? VK_LBUTTON : (button == 1 ? VK_RBUTTON : VK_MBUTTON);
 	return (GetAsyncKeyState(vKey) & 0x8000) != 0;
+}
+
+DirectX::XMFLOAT2 Input::GetMousePosition()
+{
+	return s_MousePos;
+}
+
+DirectX::XMFLOAT2 Input::GetMouseDelta()
+{
+	// Nếu chuột đang tương tác với UI, Delta coi như bằng 0 để Camera không xoay
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)
+		return { 0, 0 };
+
+	return s_MouseDelta;
+}
+
+float Input::GetMouseWheelDelta()
+{
+	if (ImGui::GetCurrentContext() && ImGui::GetIO().WantCaptureMouse)
+		return 0.0f;
+
+	return s_MouseWheelDelta;
 }
 
 void Input::ProcessRawInput(LPARAM lParam)

@@ -11,9 +11,9 @@ public:
 
 	// Mouse
 	static bool IsMouseButtonPressed(int button);
-	static DirectX::XMFLOAT2 GetMousePosition() { return s_MousePos; }
-	static DirectX::XMFLOAT2 GetMouseDelta() { return s_MouseDelta; }
-	static float GetMouseWheelDelta() { return s_MouseWheelDelta; }
+	static DirectX::XMFLOAT2 GetMousePosition();
+	static DirectX::XMFLOAT2 GetMouseDelta();
+	static float GetMouseWheelDelta();
 
 	// Được gọi từ WindowProc
 	static void ProcessRawInput(LPARAM lParam);

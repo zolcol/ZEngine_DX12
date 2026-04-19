@@ -206,3 +206,75 @@ void UIHelper::DrawBool(const std::string& label, bool& value, float columnWidth
 	ImGui::PopID();
 	ImGui::Separator();
 }
+
+void UIHelper::DrawDropdown(const std::string& label, const char** options, int optionCount, int& selectedIndex, float columnWidth)
+{
+	ImGui::PushID(label.c_str());
+
+	if (ImGui::BeginTable("##dropdown_table", 2, ImGuiTableFlags_None))
+	{
+		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, columnWidth);
+		ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch);
+
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("%s", label.c_str());
+
+		ImGui::TableSetColumnIndex(1);
+
+		ImGui::PushItemWidth(-FLT_MIN);
+		const char* currentItem = options[selectedIndex];
+		if (ImGui::BeginCombo("##combo", currentItem))
+		{
+			for (int i = 0; i < optionCount; i++)
+			{
+				bool isSelected = (currentItem == options[i]);
+				if (ImGui::Selectable(options[i], isSelected))
+				{
+					selectedIndex = i;
+				}
+				if (isSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		ImGui::PopItemWidth();
+
+		ImGui::EndTable();
+	}
+
+	ImGui::PopID();
+	ImGui::Separator();
+}
+
+void UIHelper::DrawColorControl(const std::string& label, DirectX::XMFLOAT3& value, float columnWidth)
+{
+	ImGui::PushID(label.c_str());
+
+	if (ImGui::BeginTable("##color_table", 2, ImGuiTableFlags_None))
+	{
+		ImGui::TableSetupColumn("Label", ImGuiTableColumnFlags_WidthFixed, columnWidth);
+		ImGui::TableSetupColumn("Controls", ImGuiTableColumnFlags_WidthStretch);
+
+		ImGui::TableNextRow();
+		ImGui::TableSetColumnIndex(0);
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("%s", label.c_str());
+
+		ImGui::TableSetColumnIndex(1);
+
+		ImGui::PushItemWidth(-FLT_MIN);
+		ImGui::ColorEdit3("##color", &value.x, ImGuiColorEditFlags_Float);
+		ImGui::PopItemWidth();
+
+		ImGui::EndTable();
+	}
+
+	ImGui::PopID();
+	ImGui::Separator();
+}

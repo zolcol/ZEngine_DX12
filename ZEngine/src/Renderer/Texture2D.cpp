@@ -32,6 +32,12 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 		}
 		
 		image = ImageData(DEFAULT_TEXTURE_PATH[textureType]);
+
+		if (!image.pixels)
+		{
+			ENGINE_FATAL("CRITICAL ERROR: Failed to load DEFAULT {} texture from: {}. Please ensure your 'Resources' folder is correctly set up!", typeStr, DEFAULT_TEXTURE_PATH[textureType]);
+			return false;
+		}
 	}
 
 	// Create Texture Resource

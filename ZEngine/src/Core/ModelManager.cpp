@@ -38,9 +38,9 @@ void ModelManager::UploadMaterialBuffer()
 	m_IsMaterialUpdated = true;
 }
 
-Model* ModelManager::InitModel(const std::string& filePath)
+Model* ModelManager::InitModel(const std::string& filePath, DirectX::XMFLOAT3 scale, DirectX::XMFLOAT3 rotation)
 {
-	std::vector<MeshLoaderData> meshLoaderDatas = LoadModel(filePath);
+	std::vector<MeshLoaderData> meshLoaderDatas = LoadModel(filePath, scale, rotation);
 
 	if (meshLoaderDatas.empty())
 	{

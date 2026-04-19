@@ -89,3 +89,96 @@ struct CameraComponent
 		Inspector::Property("Is Primary", IsPrimary);
 	}
 };
+
+
+enum class LightType : int
+{
+	Directional = 0,
+	Point		= 1,
+	Spot		= 2
+};
+
+struct LightComponent
+{
+	LightType Type = LightType::Directional;
+	XMFLOAT3 Color = { 1, 1, 1 };
+	float Intensity = 1;
+
+	// Point, Spot
+	float Range = 10;
+
+	// Spot
+	float InnerAngle = 15.0f;
+	float OuterAngle = 30.0f;
+
+	bool CastShadow = false;
+	
+	void Inspect()
+	{
+		const char* lightTypeOptions[] = { "Directional", "Point", "Spot" };
+		int selectedIndex = (int)Type;
+		Inspector::Property("Light Type", lightTypeOptions, 3, selectedIndex);
+		Type = (LightType)selectedIndex;
+
+		Inspector::ColorProperty("Color", Color);
+		Inspector::Property("Intensity", Intensity, 0.1f, 0.0f, 1000.0f);
+
+		if (Type != LightType::Directional)
+		{
+			Inspector::Property("Range", Range, 0.1f, 0.0f, 1000.0f);
+		}
+
+		if (Type == LightType::Spot)
+		{
+			Inspector::Property("Inner Angle", InnerAngle, 0.1f, 0.0f, 89.0f);
+			Inspector::Property("Outer Angle", OuterAngle, 0.1f, 0.0f, 90.0f);
+		}
+
+		Inspector::Property("Cast Shadow", CastShadow);
+	}
+};
+
+struct GPULightData
+{
+	XMFLOAT3 Color;
+	float    Intensity;
+	XMFLOAT3 Position;
+	float    Range;
+	XMFLOAT3 Direction;
+	int      Type; // 0: Dir, 1: Point, 2: Spot                                                             
+	float    InnerAngle;
+	float    OuterAngle;
+	XMFLOAT2 Padding;
+
+	GPULightData(const LightComponent& light, const TransformComponent& transform)
+	{
+		Color = light.Color;
+		Intensity = light.Intensity;
+
+		Position = transform.Position;
+		Range = light.Range;
+		Type = (int)light.Type;
+
+		// 👉 Tính direction từ Euler rotation (radian)
+		XMMATRIX rotMatrix = XMMatrixRotationRollPitchYaw(
+			transform.Rotation.x,
+			transform.Rotation.y,
+			transform.Rotation.z
+		);
+
+		// Forward mặc định là (0,0,1)
+		XMVECTOR forward = XMVector3TransformNormal(
+			XMVectorSet(0, 0, 1, 0),
+			rotMatrix
+		);
+
+		forward = XMVector3Normalize(forward);
+		XMStoreFloat3(&Direction, forward);
+
+		// 👉 Spot light: dùng cos(angle)
+		InnerAngle = cosf(light.InnerAngle);
+		OuterAngle = cosf(light.OuterAngle);
+
+		Padding = { 0.0f, 0.0f };
+	}
+};

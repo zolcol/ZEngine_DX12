@@ -26,3 +26,13 @@ void Inspector::Property(const char* PropName, bool& value)
 {
 	UIHelper::DrawBool(PropName, value);
 }
+
+void Inspector::Property(const char* PropName, const char** options, int optionCount, int& selectedIndex)
+{
+	UIHelper::DrawDropdown(PropName, options, optionCount, selectedIndex);
+}
+
+void Inspector::ColorProperty(const char* PropName, DirectX::XMFLOAT3& value)
+{
+	UIHelper::DrawColorControl(PropName, value);
+}

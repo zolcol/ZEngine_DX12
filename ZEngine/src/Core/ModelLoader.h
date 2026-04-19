@@ -16,5 +16,7 @@ struct MeshLoaderData
 	MaterialLoaderData material;
 };
 
-std::vector<MeshLoaderData> LoadModel(const std::string& filePath);
+std::vector<MeshLoaderData> LoadModel(const std::string& filePath, 
+	DirectX::XMFLOAT3 scale = { 1.0f, 1.0f, 1.0f }, 
+	DirectX::XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f });
 
