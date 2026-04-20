@@ -26,6 +26,7 @@ Texture2D<float4> GlobalTextures[10000] : register(t0, space0);
 
 SamplerState LinearWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
+SamplerComparisonState ShadowSampler : register(s2);
 
 // Cbuffer 1: Camera Matrices
 cbuffer TransformBuffer : register(b0, space2)
@@ -67,12 +68,57 @@ struct LightData
     int    Type; // 0: Dir, 1: Point, 2: Spot
     float  InnerAngle;
     float  OuterAngle;
-    float2 Padding;
+
+    int    ShadowMapIndex;
+    float  Padding;
+    float4x4 LightViewProj;
 };
 
 StructuredBuffer<MaterialData> GlobalMaterials : register(t0, space2);
 StructuredBuffer<ObjectData>   GlobalObjectData : register(t1, space2);
 StructuredBuffer<LightData>    GlobalLights     : register(t2, space2);
+
+// ==========================================
+// SHADOW CALCULATION
+// ==========================================
+
+float CalculateShadow(float3 worldPos, LightData light)
+{
+    if (light.ShadowMapIndex < 0) return 1.0;
+
+    // Transform to Light Clip Space
+    float4 shadowPos = mul(float4(worldPos, 1.0), light.LightViewProj);
+    
+    // Perspective Divide
+    float3 projCoords = shadowPos.xyz / shadowPos.w;
+    
+    // Transform to [0, 1] range for UV sampling
+    projCoords.xy = projCoords.xy * 0.5 + 0.5;
+    projCoords.y = 1.0 - projCoords.y; // Flip Y for DirectX
+
+    // Out of bounds check
+    if (projCoords.z > 1.0 || projCoords.x < 0 || projCoords.x > 1 || projCoords.y < 0 || projCoords.y > 1) 
+        return 1.0;
+
+    float currentDepth = projCoords.z;
+    float bias = 0.0005; 
+    
+    // PCF (Percentage Closer Filtering) 3x3
+    float shadow = 0.0;
+    float2 texelSize = 1.0 / 4096.0;
+    
+    for(int x = -1; x <= 1; ++x)
+    {
+        for(int y = -1; y <= 1; ++y)
+        {
+            float2 offset = float2(x, y) * texelSize;
+            shadow += GlobalTextures[light.ShadowMapIndex].SampleCmpLevelZero(ShadowSampler, projCoords.xy + offset, currentDepth - bias);
+        }
+    }
+    shadow /= 9.0;
+    
+    return lerp(0.2, 1.0, shadow);
+}
 
 // ==========================================
 // PBR MATH FUNCTIONS
@@ -173,6 +219,10 @@ float4 PSMain(PixelInput input) : SV_TARGET
     for(uint i = 0; i < LightCount; ++i)
     {
         LightData light = GlobalLights[i];
+        
+        // Calculate shadow factor
+        float shadow = CalculateShadow(input.worldPos, light);
+
         float3 L, radiance;
         float attenuation = 1.0;
 
@@ -216,7 +266,7 @@ float4 PSMain(PixelInput input) : SV_TARGET
         kD *= 1.0 - metallic;
 
         float NdotL = max(dot(N, L), 0.0);
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL * shadow;
     }
 
     // 5. Final Color Composition

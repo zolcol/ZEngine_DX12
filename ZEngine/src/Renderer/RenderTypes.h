@@ -41,6 +41,16 @@ struct alignas(16) ConstantBufferData
 	float padding;
 };
 
+struct alignas(16) ShadowConstantBufferData
+{
+	XMFLOAT4X4 LightViewMatrix;
+	XMFLOAT4X4 LightProjectionMatrix;
+	XMFLOAT3   PaddingPos;
+	float padding;
+};
+
+
+
 struct ObjectData
 {
 	XMMATRIX WorldTransform;

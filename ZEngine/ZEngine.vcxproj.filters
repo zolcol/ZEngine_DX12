@@ -84,6 +84,7 @@
     <ClCompile Include="src\Core\Inspector.cpp" />
     <ClCompile Include="src\Core\EditorCameraController.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
+    <ClCompile Include="src\Renderer\ShadowPass.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -158,11 +159,13 @@
     <ClInclude Include="src\Core\RegisterEnttMeta.h" />
     <ClInclude Include="src\Core\EditorCameraController.h" />
     <ClInclude Include="src\Core\Input.h" />
+    <ClInclude Include="src\Renderer\ShadowPass.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="src\Renderer\Shaders\shader.hlsl">
       <Filter>src\Renderer\Shaders</Filter>
     </None>
+    <None Include="src\Renderer\Shaders\Shadow.hlsl" />
   </ItemGroup>
 </Project>

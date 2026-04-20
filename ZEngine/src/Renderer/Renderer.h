@@ -21,6 +21,7 @@ class Entity;
 struct TransformComponent;
 class Editor;
 struct GPULightData;
+class ShadowPass;
 
 class Renderer
 {
@@ -56,7 +57,7 @@ private:
 
 	// Light
 	uint32_t									m_FrameLightCount = 0;
-	std::vector<std::vector<GPULightData>>		m_LightDatas;
+	std::vector<std::vector<GPULightData>>		m_GpuLightDatas;
 	std::vector<std::unique_ptr<Buffer>>		m_LightDataBuffers;
 
 	std::unique_ptr<TextureDepth>	m_DepthTexture;
@@ -66,6 +67,9 @@ private:
 	std::unique_ptr<Shader>         m_VS;
 	std::unique_ptr<Shader>         m_PS;
 	std::unique_ptr<PipelineState>  m_PSO;
+
+	// --- RenderPass ---
+	std::unique_ptr<ShadowPass>		m_ShadowPass;
 
 	// --- Window & Frame State ---
 	int		 m_Width		      = 0;

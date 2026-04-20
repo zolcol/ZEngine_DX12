@@ -20,8 +20,15 @@ void Application::Init()
 	m_Window = std::make_unique<Window>(WIDTH, HEIGHT, L"ZEngine");
 	m_Window->Show();
 	
+	// Lấy kích thước thực tế của Client Area sau khi Windows tạo cửa sổ
+	// (Vì OS có thể bóp nhỏ cửa sổ lại nếu nó lớn hơn màn hình hoặc vướng Taskbar)
+	RECT clientRect;
+	GetClientRect(m_Window->GetHWND(), &clientRect);
+	int actualWidth = clientRect.right - clientRect.left;
+	int actualHeight = clientRect.bottom - clientRect.top;
+
 	m_Renderer = std::make_unique<Renderer>();
-	if (!m_Renderer->Init(m_Window->GetHWND(), WIDTH, HEIGHT, FRAME_COUNT))
+	if (!m_Renderer->Init(m_Window->GetHWND(), actualWidth, actualHeight, FRAME_COUNT))
 	{
 		ENGINE_FATAL("Failed to initialize Renderer!");
 		return;

@@ -163,7 +163,7 @@ struct LightComponent
 {
 	LightType Type = LightType::Directional;
 	XMFLOAT3 Color = { 1, 1, 1 };
-	float Intensity = 1;
+	float Intensity = 5;
 
 	// Point, Spot
 	float Range = 10;
@@ -173,6 +173,46 @@ struct LightComponent
 	float OuterAngle = 30.0f;
 
 	bool CastShadow = false;
+	int shadowMapIndex = -1;
+
+	[[nodiscard]] DirectX::XMFLOAT4X4 GetViewMatrix(const TransformComponent& transform) const
+	{
+		using namespace DirectX;
+		// Hướng đèn là Forward của transform. Ma trận View là nghịch đảo của ma trận World đèn.
+		XMMATRIX matTrans = XMMatrixTranslation(transform.Position.x, transform.Position.y, transform.Position.z);
+		XMMATRIX matRot = transform.GetRotationMatrix();
+
+		XMMATRIX lightWorld = matRot * matTrans;
+		XMMATRIX view = XMMatrixInverse(nullptr, lightWorld);
+
+		XMFLOAT4X4 res;
+		XMStoreFloat4x4(&res, view);
+		return res;
+	}
+
+	[[nodiscard]] DirectX::XMFLOAT4X4 GetProjectionMatrix() const
+	{
+		using namespace DirectX;
+		XMMATRIX proj;
+		if (Type == LightType::Directional)
+		{
+			// Tạm thời dùng Ortho cố định cho Directional Light Shadow (Khu vực hẹp để tăng độ sắc nét)
+			proj = XMMatrixOrthographicLH(5.0f, 5.0f, 0.1f, 100.0f);
+		}
+		else if (Type == LightType::Spot)
+		{
+			// FOV của Spot light shadow là 2 lần OuterAngle
+			proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(OuterAngle * 2.0f), 1.0f, 0.1f, Range);
+		}
+		else
+		{
+			proj = XMMatrixIdentity();
+		}
+
+		XMFLOAT4X4 res;
+		XMStoreFloat4x4(&res, proj);
+		return res;
+	}
 	
 	void Inspect()
 	{
@@ -209,9 +249,14 @@ struct GPULightData
 	int      Type; // 0: Dir, 1: Point, 2: Spot                                                             
 	float    InnerAngle;
 	float    OuterAngle;
-	XMFLOAT2 Padding;
+	
+	int		 ShadowMapIndex;
+	float	 padding;
+	XMFLOAT4X4	lightViewProj;
 
-	GPULightData(const LightComponent& light, const TransformComponent& transform)
+	GPULightData() = default;
+
+	GPULightData(const LightComponent& light, const TransformComponent& transform, int shadowMapIndex = -1)
 	{
 		Color = light.Color;
 		Intensity = light.Intensity;
@@ -233,9 +278,18 @@ struct GPULightData
 		XMStoreFloat3(&Direction, forward);
 
 		// 👉 Spot light: dùng cos(angle)
-		InnerAngle = cosf(light.InnerAngle);
-		OuterAngle = cosf(light.OuterAngle);
+		InnerAngle = cosf(DirectX::XMConvertToRadians(light.InnerAngle));
+		OuterAngle = cosf(DirectX::XMConvertToRadians(light.OuterAngle));
 
-		Padding = { 0.0f, 0.0f };
+		// Shadow
+		ShadowMapIndex = shadowMapIndex;
+
+		// Calculate Light View Projection Matrix
+		XMFLOAT4X4 viewF = light.GetViewMatrix(transform);
+		XMFLOAT4X4 projF = light.GetProjectionMatrix();
+		XMMATRIX view = XMLoadFloat4x4(&viewF);
+		XMMATRIX proj = XMLoadFloat4x4(&projF);
+		
+		XMStoreFloat4x4(&lightViewProj, XMMatrixTranspose(view * proj));
 	}
 };

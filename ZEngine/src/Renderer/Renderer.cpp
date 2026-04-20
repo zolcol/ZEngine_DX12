@@ -24,6 +24,7 @@
 #include "Core/RenderComponent.h"
 #include <Core/Application.h>
 #include "Core/Editor.h"
+#include "ShadowPass.h"
 
 
 Renderer::Renderer() = default;
@@ -66,12 +67,16 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_Swapchain = std::make_unique<Swapchain>();
 	m_Swapchain->Init(config, m_Device->GetDevice(), m_DescriptorManager.get());
 
+	m_ShadowPass = std::make_unique<ShadowPass>();
+
 	// Khởi tạo Constant Buffer (Đăng ký Root CBV trước)
 	InitDepthBuffer();
 	InitRootConstants();
 	InitConstantBuffers();
 	InitObjectDataBuffers();
 	InitLightBuffers();
+
+	m_ShadowPass->InitConstantBuffer(m_Device->GetDevice(), m_DescriptorManager.get(), m_FramesInFlight);
 
 	// Chốt cấu trúc Descriptor Tables (Bindless) sau khi đã có hết các Root CBV
 	m_DescriptorManager->SetupStandardDescriptorTables();
@@ -86,9 +91,20 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_PS = std::make_unique<Shader>();
 	m_PS->Init(L"src/Renderer/Shaders/shader.hlsl", "PSMain", "ps_5_1");
 
-	m_PSO = std::make_unique<PipelineState>();
-	m_PSO->Init(m_Device->GetDevice(), *m_RootSign, *m_VS, *m_PS);
+	PipelineConfig psoConfig{};
+	psoConfig.vs = m_VS.get();
+	psoConfig.ps = m_PS.get();
+	psoConfig.numRenderTargets = 1;
+	psoConfig.rtvFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 
+	m_PSO = std::make_unique<PipelineState>();
+	m_PSO->Init(m_Device->GetDevice(), *m_RootSign, psoConfig);
+
+	 //Init RenderPass
+	m_ShadowPass->Init(
+		m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), m_RootSign.get(),
+		m_FramesInFlight, m_Width, m_Height
+	);
 
 	ENGINE_INFO("Renderer initialized successfully.");
 	return true;
@@ -103,10 +119,26 @@ void Renderer::BeginFrame(Scene* scene)
 	auto commandList = frameRes.commandList.Get();
 
 	// Đợi GPU hoàn thành frame tương ứng trước đó
- 	m_Fence->Wait(frameRes.fenceValue);
+	m_Fence->Wait(frameRes.fenceValue);
 
 	frameRes.commandAllocator->Reset();
 	commandList->Reset(frameRes.commandAllocator.Get(), nullptr);
+
+	// Dùng chung các renderpass
+	UpdateConstantBuffersData(m_CurrentFrame, scene);
+	UpdateObjectDatas(m_CurrentFrame, scene);
+	UpdateLightBuffers(m_CurrentFrame, scene);
+
+	commandList->SetGraphicsRootSignature(m_RootSign->Get());
+	m_DescriptorManager->BindDescriptors(commandList, m_CurrentFrame);
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	commandList->SetGraphicsRoot32BitConstants(0, 1, &m_FrameLightCount, 2);
+
+	// Shadow Pass render
+	m_ShadowPass->BeginRenderPass(commandList, m_CurrentFrame, m_ModelManager.get(), scene);
+	m_ShadowPass->RenderingPass(commandList, scene);
+	m_ShadowPass->EndRenderPass(commandList, m_CurrentFrame);
 
 	// Chỉ định Render Target
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -115,25 +147,20 @@ void Renderer::BeginFrame(Scene* scene)
 		D3D12_RESOURCE_STATE_RENDER_TARGET
 	);
 	commandList->ResourceBarrier(1, &barrier);
-	
+
 	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 
 	commandList->OMSetRenderTargets(1, &m_Swapchain->GetCurrentRTVCpuHandle(), false, &m_DepthTexture->GetDSVCpuHandle());
 	commandList->ClearRenderTargetView(m_Swapchain->GetCurrentRTVCpuHandle(), clearColor, 0, nullptr);
 	commandList->ClearDepthStencilView(m_DepthTexture->GetDSVCpuHandle(), D3D12_CLEAR_FLAG_DEPTH, 1, 0, 0, nullptr);
 
-	// Cấu hình Pipeline State
+	// View port
 	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)m_Width, (float)m_Height);
 	CD3DX12_RECT scissorRect(0, 0, m_Width, m_Height);
 	commandList->RSSetViewports(1, &viewport);
 	commandList->RSSetScissorRects(1, &scissorRect);
-
-	commandList->SetGraphicsRootSignature(m_RootSign->Get());
+	// Set Pipeline
 	commandList->SetPipelineState(m_PSO->Get());
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	// Bind Descriptor
-	m_DescriptorManager->BindDescriptors(commandList, m_CurrentFrame);
 
 	// Bind Vertex Buffer
 	Buffer* vertexBuffer = m_ModelManager->GetVertexBuffer();
@@ -157,13 +184,8 @@ void Renderer::BeginFrame(Scene* scene)
 		ENGINE_FATAL("Material Data Not Update to GPU!!!");
 		return;
 	}
-	UpdateConstantBuffersData(m_CurrentFrame, scene);
-	UpdateObjectDatas(m_CurrentFrame, scene);
-	UpdateLightBuffers(m_CurrentFrame, scene);
 
-	commandList->SetGraphicsRoot32BitConstants(0, 1, &m_FrameLightCount, 2);
-
-	scene->GetRegistry().view<MeshComponent, TransformComponent, RenderIndexComponent>().each([&](const MeshComponent& mesh, const TransformComponent& transform, const RenderIndexComponent& renderID) 
+	scene->GetRegistry().view<MeshComponent, TransformComponent, RenderIndexComponent>().each([&](const MeshComponent& mesh, const TransformComponent& transform, const RenderIndexComponent& renderID)
 		{
 			const auto* model = mesh.model;
 
@@ -187,7 +209,7 @@ void Renderer::EndFrame(Scene* scene, Editor* editor)
 	auto commandList = frameRes.commandList.Get();
 
 	editor->Render(commandList);
-	
+
 	// 2. Chuyển trạng thái buffer sang PRESENT để hiển thị
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_Swapchain->GetBackBuffer(m_CurrentBufferIndex),
@@ -217,7 +239,7 @@ void Renderer::EndFrame(Scene* scene, Editor* editor)
 	// Đồng bộ hóa Frame tiếp theo
 	m_Fence->Signal(m_CommandContext->GetCommandQueue(), ++m_FenceValue);
 	frameRes.fenceValue = m_FenceValue;
-	
+
 	m_CurrentFrame = (m_CurrentFrame + 1) % m_FramesInFlight;
 }
 
@@ -267,7 +289,7 @@ void Renderer::UpdateConstantBuffersData(int currentFrame, Scene* scene)
 	XMMATRIX viewMatrix = XMMatrixIdentity();
 	XMMATRIX projMaxtrix = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)m_Width / m_Height, 0.1f, 1000.0f);
 	bool hasPrimaryCamera = false;
-	
+
 	scene->GetRegistry().view<TransformComponent, CameraComponent>().each([&](TransformComponent& transform, CameraComponent& camera)
 		{
 			if (camera.IsPrimary && !hasPrimaryCamera)
@@ -315,7 +337,7 @@ void Renderer::InitObjectDataBuffers()
 		m_ObjectDataBuffers[i] = std::make_unique<Buffer>();
 		m_ObjectDataBuffers[i]->Init(m_Device->GetDevice(), sizeof(ObjectData) * MAX_OBJECT_DATAS, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_COMMON);
 	}
-	
+
 	m_DescriptorManager->CreateRootSRVPerFrame(m_ObjectDataBuffers, 1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
 }
 
@@ -336,12 +358,12 @@ void Renderer::UpdateObjectDatas(int currentFrame, Scene* scene)
 
 void Renderer::InitLightBuffers()
 {
-	m_LightDatas.resize(m_FramesInFlight);
+	m_GpuLightDatas.resize(m_FramesInFlight);
 	m_LightDataBuffers.resize(m_FramesInFlight);
 
 	for (size_t i = 0; i < m_FramesInFlight; i++)
 	{
-		m_LightDatas[i].reserve(MAX_LIGHT_OBJECT);
+		m_GpuLightDatas[i].resize(MAX_LIGHT_OBJECT);
 
 		m_LightDataBuffers[i] = std::make_unique<Buffer>();
 		m_LightDataBuffers[i]->Init(m_Device->GetDevice(), sizeof(GPULightData) * MAX_LIGHT_OBJECT, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_COMMON);
@@ -354,19 +376,22 @@ void Renderer::UpdateLightBuffers(int currentFrame, Scene* scene)
 {
 	m_FrameLightCount = 0;
 
+	bool foundShadowLight = false;
 	scene->GetRegistry().view<LightComponent, TransformComponent>().each([&](const LightComponent& lightData, const TransformComponent& transform)
 		{
-
-			GPULightData gpuLight(lightData, transform);
-			m_LightDatas[currentFrame][m_FrameLightCount] = gpuLight;
+			GPULightData gpuLight(lightData, transform, 
+				!foundShadowLight && lightData.CastShadow ? m_ShadowPass->GetShadowSRVs(currentFrame) : -1);
+			m_GpuLightDatas[currentFrame][m_FrameLightCount] = gpuLight;
 
 			m_FrameLightCount += 1;
+
+			lightData.CastShadow ? foundShadowLight = true : 0;
 		}
 	);
 
 	m_LightDataBuffers[currentFrame]->UploadData(
 		m_Device->GetDevice(), m_CommandContext.get(),
-		m_LightDatas[currentFrame].data(),
+		m_GpuLightDatas[currentFrame].data(),
 		m_FrameLightCount * sizeof(GPULightData),
 		0,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
@@ -384,5 +409,5 @@ void Renderer::OnRenderIndexCreated(entt::registry& registry, entt::entity entit
 	{
 		m_ObjectDatas[i].push_back(ObjectData());
 	}
-	
+
 }

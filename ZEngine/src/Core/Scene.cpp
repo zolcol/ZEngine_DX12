@@ -33,6 +33,10 @@ void Scene::InitModel()
 
 	Entity light1 = CreateEntity("Light 1");
 	light1.AddComponent<LightComponent>();
+	light1.GetComponent<LightComponent>().CastShadow = true;
+	light1.GetComponent<LightComponent>().Intensity = 100;
+	light1.GetComponent<TransformComponent>().Position = { -2.0f, 4.0f, -2.0f };
+	light1.GetComponent<TransformComponent>().SetEulerAnglesDegrees({ 45.0f, 45.0f, 0.0f });
 	light1.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/Arrow/scene.gltf", { 0.1f, 0.1f, 0.1f }, { 0, -90, 0}));
 	light1.AddComponent<RenderIndexComponent>();
 
@@ -55,7 +59,7 @@ void Scene::Update(float dt)
 		{
 			if (!m_Registry.any_of<CameraComponent>(entity) && !m_Registry.any_of<LightComponent>(entity))
 			{
-				//transform.Rotate({ 0.0f, 1.0f, 0.0f }, dt * 50.0f);
+				transform.Rotate({ 0.0f, 1.0f, 0.0f }, dt * 50.0f);
 			}
 		});
 }

@@ -264,8 +264,17 @@ void DescriptorManager::InitStaticSamplers()
 		D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP
 	);
 
+	// Register s2: Shadow Sampler (Comparison)
+	CD3DX12_STATIC_SAMPLER_DESC shadowSampler(
+		2, D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER, D3D12_TEXTURE_ADDRESS_MODE_BORDER
+	);
+	shadowSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	shadowSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
+
 	m_StaticSamplers.push_back(linearWrap);
 	m_StaticSamplers.push_back(pointClamp);
+	m_StaticSamplers.push_back(shadowSampler);
 }
 
 void DescriptorManager::BindDescriptorHeaps(ID3D12GraphicsCommandList* cmdList)
