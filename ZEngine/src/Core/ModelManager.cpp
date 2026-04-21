@@ -61,7 +61,7 @@ Model* ModelManager::InitModel(const std::string& filePath, DirectX::XMFLOAT3 sc
 			m_CurrentIndexLocation + meshLoaderData.indices.size() > MAX_INDICES)
 		{
 			ENGINE_ERROR("ModelManager Buffer Overflow! Cannot load mesh from: {}. Try increasing MAX_VERTICES or MAX_INDICES.", filePath);
-			break;
+			return nullptr;
 		}
 
 		Mesh mesh;

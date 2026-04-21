@@ -1,43 +1,41 @@
 struct VertexInput
 {
     float3 position : POSITION;
-    float3 normal   : NORMAL;
-    float2 uv       : TEXCOORD;
-    float4 tangent  : TANGENT;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
+    float4 tangent : TANGENT;
 };
 
 struct PixelInput
 {
     float4 position : SV_POSITION;
     float3 worldPos : WORLD_POSITION;
-    float3 normal   : NORMAL;
-    float2 uv       : TEXCOORD;
-    float4 tangent  : TANGENT;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
+    float4 tangent : TANGENT;
 };
 
 static const float PI = 3.14159265359;
+static const float INV_PI = 0.31830988618;
 
 // ==========================================
 // RESOURCES
 // ==========================================
 
-// Bindless SRV Table
 Texture2D<float4> GlobalTextures[10000] : register(t0, space0);
 
 SamplerState LinearWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
 SamplerComparisonState ShadowSampler : register(s2);
 
-// Cbuffer 1: Camera Matrices
 cbuffer TransformBuffer : register(b0, space2)
 {
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
-    float3   CameraPos;
-    float    Padding;
+    float3 CameraPos;
+    float Padding;
 };
 
-// Cbuffer 2: Root Constants
 cbuffer MaterialBuffer : register(b0, space1)
 {
     uint MaterialID;
@@ -61,222 +59,290 @@ struct ObjectData
 struct LightData
 {
     float3 Color;
-    float  Intensity;
+    float Intensity;
     float3 Position;
-    float  Range;
+    float Range;
     float3 Direction;
-    int    Type; // 0: Dir, 1: Point, 2: Spot
-    float  InnerAngle;
-    float  OuterAngle;
-
-    int    ShadowMapIndex;
-    float  Padding;
+    int Type; // 0: Directional, 1: Point, 2: Spot
+    float InnerAngle; // cos(innerAngle)
+    float OuterAngle; // cos(outerAngle)
+    int ShadowMapIndex;
+    float _Pad;
     float4x4 LightViewProj;
 };
 
 StructuredBuffer<MaterialData> GlobalMaterials : register(t0, space2);
-StructuredBuffer<ObjectData>   GlobalObjectData : register(t1, space2);
-StructuredBuffer<LightData>    GlobalLights     : register(t2, space2);
+StructuredBuffer<ObjectData> GlobalObjectData : register(t1, space2);
+StructuredBuffer<LightData> GlobalLights : register(t2, space2);
 
 // ==========================================
-// SHADOW CALCULATION
+// SHADOW: Poisson Disk 16-Tap + Normal Offset
 // ==========================================
 
-float CalculateShadow(float3 worldPos, LightData light)
+static const float2 PoissonDisk[16] =
 {
-    if (light.ShadowMapIndex < 0) return 1.0;
+    float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725),
+    float2(-0.094184101, -0.92938870), float2(0.34495938, 0.29387760),
+    float2(-0.91588581, 0.45771432), float2(-0.81544232, -0.87912464),
+    float2(-0.38277543, 0.27676845), float2(0.97484398, 0.75648379),
+    float2(0.44323325, -0.97511554), float2(0.53742981, -0.47373420),
+    float2(-0.26496911, -0.41893023), float2(0.79197514, 0.19090188),
+    float2(-0.24188840, 0.99706507), float2(-0.81409955, 0.91437590),
+    float2(0.19984126, 0.78641367), float2(0.14383161, -0.14100790)
+};
 
-    // Transform to Light Clip Space
-    float4 shadowPos = mul(float4(worldPos, 1.0), light.LightViewProj);
-    
-    // Perspective Divide
+float InterleavedGradientNoise(float2 screenPos)
+{
+    float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
+    return frac(magic.z * frac(dot(screenPos, magic.xy)));
+}
+
+float2x2 RotationMatrix(float angle)
+{
+    float s, c;
+    sincos(angle, s, c);
+    return float2x2(c, -s, s, c);
+}
+
+float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, float2 screenPos)
+{
+    if (light.ShadowMapIndex < 0)
+        return 1.0;
+
+    // Lấy kích thước thực tế của Shadow Map từ Texture
+    float width, height;
+    GlobalTextures[light.ShadowMapIndex].GetDimensions(width, height);
+    float2 texelSize = 1.0 / float2(width, height);
+
+    // Normal-Offset Bias logic from Shader 2
+    float NoL = clamp(dot(N, L), 0.0, 1.0);
+    float3 biasPos = worldPos + N * (1.0 - NoL) * 0.05;
+
+    float4 shadowPos = mul(float4(biasPos, 1.0), light.LightViewProj);
     float3 projCoords = shadowPos.xyz / shadowPos.w;
-    
-    // Transform to [0, 1] range for UV sampling
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
-    projCoords.y = 1.0 - projCoords.y; // Flip Y for DirectX
+    projCoords.y = 1.0 - projCoords.y;
 
-    // Out of bounds check
-    if (projCoords.z > 1.0 || projCoords.x < 0 || projCoords.x > 1 || projCoords.y < 0 || projCoords.y > 1) 
+    // Frustum check
+    if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
         return 1.0;
 
     float currentDepth = projCoords.z;
-    float bias = 0.0005; 
+    float bias = 0.0003;
+
+    // Poisson rotation per pixel
+    float noise = InterleavedGradientNoise(screenPos) * 2.0 * PI;
+    float2x2 rot = RotationMatrix(noise);
     
-    // PCF (Percentage Closer Filtering) 3x3
+    // Spread tính theo đơn vị texel (ví dụ nhòe ra 1.5 pixels)
+    float spread = 1.5;
+    float2 spreadVec = spread * texelSize;
+
     float shadow = 0.0;
-    float2 texelSize = 1.0 / 4096.0;
-    
-    for(int x = -1; x <= 1; ++x)
+    [unroll]
+    for (int i = 0; i < 16; ++i)
     {
-        for(int y = -1; y <= 1; ++y)
-        {
-            float2 offset = float2(x, y) * texelSize;
-            // Reverse Z: GreaterEqual means shadowDepth >= currentDepth + bias is LIT
-            shadow += GlobalTextures[light.ShadowMapIndex].SampleCmpLevelZero(ShadowSampler, projCoords.xy + offset, currentDepth + bias);
-        }
+        float2 offset = mul(PoissonDisk[i], rot) * spreadVec;
+        shadow += GlobalTextures[light.ShadowMapIndex].SampleCmpLevelZero(
+            ShadowSampler, projCoords.xy + offset, currentDepth + bias
+        );
     }
-    shadow /= 9.0;
-    
-    return lerp(0.2, 1.0, shadow);
+    shadow /= 16.0;
+
+    return lerp(0.15, 1.0, shadow);
 }
 
 // ==========================================
-// PBR MATH FUNCTIONS
+// PBR: Cook-Torrance BRDF
 // ==========================================
 
-float DistributionGGX(float3 N, float3 H, float roughness)
+float DistributionGGX(float NdotH, float roughness)
 {
     float a = roughness * roughness;
     float a2 = a * a;
-    float NdotH = max(dot(N, H), 0.0);
-    float NdotH2 = NdotH * NdotH;
-
-    float nom = a2;
-    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-    denom = PI * denom * denom;
-
-    return nom / max(denom, 0.0000001);
+    float d = (NdotH * a2 - NdotH) * NdotH + 1.0;
+    return a2 / (PI * d * d + 1e-7);
 }
 
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-    float r = (roughness + 1.0);
-    float k = (r * r) / 8.0;
-
-    float nom = NdotV;
-    float denom = NdotV * (1.0 - k) + k;
-
-    return nom / denom;
+    float r = roughness + 1.0;
+    float k = (r * r) * 0.125;
+    return NdotV / (NdotV * (1.0 - k) + k);
 }
 
-float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+float GeometrySmith(float NdotV, float NdotL, float roughness)
 {
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
-
-    return ggx1 * ggx2;
+    return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
 }
 
 float3 FresnelSchlick(float cosTheta, float3 F0)
 {
-    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+    return F0 + (1.0 - F0) * pow(saturate(1.0 - cosTheta), 5.0);
+}
+
+float3 FresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+{
+    return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0)
+               * pow(saturate(1.0 - cosTheta), 5.0);
 }
 
 // ==========================================
-// MAIN SHADERS
+// TONE MAPPING
+// ==========================================
+
+float3 ACESFilmic(float3 x)
+{
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+}
+
+// ==========================================
+// VERTEX SHADER
 // ==========================================
 
 PixelInput VSMain(VertexInput input)
 {
     PixelInput output;
-    
+
     float4x4 WorldMatrix = GlobalObjectData[ObjectRenderID].WorldTransformMatrix;
-    float4 worldPos = mul(float4(input.position, 1.0f), WorldMatrix);
-    
+    float4 worldPos = mul(float4(input.position, 1.0), WorldMatrix);
+
     output.worldPos = worldPos.xyz;
     output.position = mul(mul(worldPos, ViewMatrix), ProjectionMatrix);
     
-    // Transform Normal and Tangent to World Space
-    output.normal = normalize(mul(input.normal, (float3x3)WorldMatrix));
-    output.tangent = float4(normalize(mul(input.tangent.xyz, (float3x3)WorldMatrix)), input.tangent.w);
+    float3x3 normalMatrix = (float3x3) WorldMatrix;
+    output.normal = normalize(mul(input.normal, normalMatrix));
+    output.tangent = float4(normalize(mul(input.tangent.xyz, normalMatrix)), input.tangent.w);
     output.uv = input.uv;
-    
+
     return output;
 }
 
+// ==========================================
+// PIXEL SHADER
+// ==========================================
+
 float4 PSMain(PixelInput input) : SV_TARGET
 {
-    // 1. Fetch Material Data
     MaterialData mat = GlobalMaterials[MaterialID];
-    
-    float4 albedoTex = GlobalTextures[mat.AlbedoTextureID].Sample(LinearWrapSampler, input.uv);
-    float3 albedo = pow(albedoTex.rgb, 2.2); // Convert to Linear Space
-    
-    float3 normalMap = GlobalTextures[mat.NormalTextureID].Sample(LinearWrapSampler, input.uv).rgb;
-    normalMap = normalMap * 2.0 - 1.0;
-    
+
+    // Texture fetching
+    float4 albedoSample = GlobalTextures[mat.AlbedoTextureID].Sample(LinearWrapSampler, input.uv);
+    float3 albedo = albedoSample.rgb;
+
     float3 orm = GlobalTextures[mat.ORMTextureID].Sample(LinearWrapSampler, input.uv).rgb;
     float ao = orm.r;
-    float roughness = orm.g;
-    float metallic = orm.b;
+    float roughness = clamp(orm.g, 0.04, 1.0);
+    float metallic = saturate(orm.b);
 
-    // 2. Prepare TBN and Normal
+    float3 emissive = GlobalTextures[mat.EmissiveTextureID].Sample(LinearWrapSampler, input.uv).rgb;
+
+    // Build TBN 
     float3 N = normalize(input.normal);
     float3 T = normalize(input.tangent.xyz);
+    
+    // Gram-Schmidt
+    T = normalize(T - dot(T, N) * N);
     float3 B = cross(N, T) * input.tangent.w;
     float3x3 TBN = float3x3(T, B, N);
+
+    float3 normalMap = GlobalTextures[mat.NormalTextureID].Sample(LinearWrapSampler, input.uv).rgb;
+    normalMap = normalMap * 2.0 - 1.0;
+    normalMap = normalize(normalMap);
     N = normalize(mul(normalMap, TBN));
 
-    // 3. Prepare Vectors
+    // Common vectors
     float3 V = normalize(CameraPos - input.worldPos);
-    float3 F0 = float3(0.04, 0.04, 0.04); 
-    F0 = lerp(F0, albedo, metallic);
+    float NdotV = max(dot(N, V), 0.0);
+    float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
 
-    // 4. Lighting Loop
+    // Direct Lighting
     float3 Lo = float3(0.0, 0.0, 0.0);
-    for(uint i = 0; i < LightCount; ++i)
+
+    [loop]
+    for (uint i = 0; i < LightCount; ++i)
     {
         LightData light = GlobalLights[i];
-        
-        // Calculate shadow factor
-        float shadow = CalculateShadow(input.worldPos, light);
-
-        float3 L, radiance;
+        float3 L;
         float attenuation = 1.0;
 
-        if(light.Type == 0) // Directional
+        if (light.Type == 0) // Directional
         {
             L = normalize(-light.Direction);
-            radiance = light.Color * light.Intensity;
         }
-        else // Point & Spot
+        else // Point & Spot with physical windowing
         {
             float3 lightVec = light.Position - input.worldPos;
             float distance = length(lightVec);
             L = normalize(lightVec);
             
-            // Physical inverse square falloff
-            attenuation = 1.0 / (distance * (distance + 0.0001));
-            
-            if(light.Type == 2) // Spot
+            float dRange = distance / max(light.Range, 0.0001);
+            float windowing = clamp(1.0 - pow(dRange, 4.0), 0.0, 1.0);
+            attenuation = (1.0 / (distance * distance + 1.0)) * (windowing * windowing);
+
+            if (light.Type == 2) // Spot
             {
                 float theta = dot(L, normalize(-light.Direction));
                 float epsilon = light.InnerAngle - light.OuterAngle;
-                float spotIntensity = clamp((theta - light.OuterAngle) / epsilon, 0.0, 1.0);
+                float spotIntensity = clamp((theta - light.OuterAngle) / max(epsilon, 0.001), 0.0, 1.0);
+                spotIntensity = smoothstep(0.0, 1.0, spotIntensity);
                 attenuation *= spotIntensity;
             }
-            
-            radiance = light.Color * light.Intensity * attenuation;
         }
 
-        // Cook-Torrance BRDF
+        float3 radiance = light.Color * light.Intensity * attenuation;
+        
+        float2 screenPos = input.position.xy;
+        float shadow = CalculateShadow(input.worldPos, N, L, light, screenPos);
+
+        // Cook-Torrance
         float3 H = normalize(V + L);
-        float D = DistributionGGX(N, H, roughness);
-        float G = GeometrySmith(N, V, L, roughness);
-        float3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
-
-        float3 numerator = D * G * F;
-        float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-        float3 specular = numerator / denominator;
-
-        float3 kS = F;
-        float3 kD = float3(1.0, 1.0, 1.0) - kS;
-        kD *= 1.0 - metallic;
-
         float NdotL = max(dot(N, L), 0.0);
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL * shadow;
+        float NdotH = max(dot(N, H), 0.0);
+        float HdotV = max(dot(H, V), 0.0);
+
+        float D = DistributionGGX(NdotH, roughness);
+        float G = GeometrySmith(NdotV, NdotL, roughness);
+        float3 F = FresnelSchlick(HdotV, F0);
+
+        float3 specular = (D * G * F) / max(4.0 * NdotV * NdotL, 1e-4);
+        
+        float3 kS = F;
+        float3 kD = (1.0 - kS) * (1.0 - metallic);
+
+        Lo += (kD * albedo * INV_PI + specular) * radiance * NdotL * shadow;
     }
 
-    // 5. Final Color Composition
-    float3 ambient = float3(0.03, 0.03, 0.03) * albedo * ao;
-    float3 color = ambient + Lo;
+    // Ambient IBL Approx (Lazarov)
+    float3 F_ambient = FresnelSchlickRoughness(NdotV, F0, roughness);
+    float3 kS_amb = F_ambient;
+    float3 kD_amb = (1.0 - kS_amb) * (1.0 - metallic);
+    float3 diffuseAmbient = kD_amb * albedo * 0.05;
 
-    // Tone Mapping & Gamma Correction
-    color = color / (color + float3(1.0, 1.0, 1.0));
-    color = pow(color, float3(1.0/2.2, 1.0/2.2, 1.0/2.2));
+    float2 envBRDF;
+    {
+        const float4 c0 = float4(-1.0, -0.0275, -0.572, 0.022);
+        const float4 c1 = float4(1.0, 0.0425, 1.040, -0.040);
+        float4 r = roughness * c0 + c1;
+        float a004 = min(r.x * r.x, exp2(-9.28 * NdotV)) * r.x + r.y;
+        envBRDF = float2(-1.04, 1.04) * a004 + r.zw;
+    }
+    
+    float3 envRadiance = float3(0.12, 0.14, 0.18);
+    float3 specularAmbient = envRadiance * (F_ambient * envBRDF.x + envBRDF.y);
+    float3 ambient = (diffuseAmbient + specularAmbient) * ao;
 
-    return float4(color, albedoTex.a);
+    // Compose final color
+    float3 color = ambient + Lo + emissive;
+
+    color *= 1.0; // Exposure
+    color = ACESFilmic(color);
+    color = pow(max(color, 0.0), 1.0 / 2.2);
+
+    return float4(color, albedoSample.a);
 }

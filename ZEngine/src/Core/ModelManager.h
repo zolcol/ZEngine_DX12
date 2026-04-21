@@ -35,8 +35,8 @@ public:
 		DirectX::XMFLOAT3 scale = { 1, 1, 1 }, 
 		DirectX::XMFLOAT3 rotation = { 0, 0, 0 });
 private:
-	const uint32_t MAX_VERTICES = 500000;
-	const uint32_t MAX_INDICES = 500000;
+	const uint32_t MAX_VERTICES = 4000000;
+	const uint32_t MAX_INDICES = 4000000;
 	const uint32_t MAX_MATERIALS = 10000;
 
 	bool m_IsMaterialUpdated = false;

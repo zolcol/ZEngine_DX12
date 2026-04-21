@@ -34,7 +34,7 @@ void Scene::InitModel()
 	Entity light1 = CreateEntity("Light 1");
 	light1.AddComponent<LightComponent>();
 	light1.GetComponent<LightComponent>().CastShadow = true;
-	light1.GetComponent<LightComponent>().Intensity = 100;
+	light1.GetComponent<LightComponent>().Intensity = 5;
 	light1.GetComponent<TransformComponent>().Position = { -2.0f, 4.0f, -2.0f };
 	light1.GetComponent<TransformComponent>().SetEulerAnglesDegrees({ 45.0f, 45.0f, 0.0f });
 	light1.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/Arrow/scene.gltf", { 0.1f, 0.1f, 0.1f }, { 0, -90, 0}));
@@ -50,10 +50,15 @@ void Scene::InitModel()
 	m_AnimeGirl.AddComponent<RenderIndexComponent>();
 	m_AnimeGirl.GetComponent<TransformComponent>().Position = { -0.5, 0, 0 };
 
+	Entity m_KnightGirl = CreateEntity("Knight Girl");
+	m_KnightGirl.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/KnightGirl/scene.gltf", { 0.02, 0.02, 0.02 }, { 90, 0, 0 }));
+	m_KnightGirl.AddComponent<RenderIndexComponent>();
+	m_KnightGirl.GetComponent<TransformComponent>().Position = { -1, 0, 0 };
+
 	m_ModelManager->UploadMaterialBuffer();
 }
 
-void Scene::Update(float dt)
+void Scene::Update(float dt) 
 {
 	m_Registry.view<TransformComponent>().each([=](entt::entity entity, TransformComponent& transform)
 		{
