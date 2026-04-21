@@ -2,7 +2,7 @@
 #include "TextureDepth.h"
 #include "DescriptorManager.h"
 
-bool TextureDepth::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, int width, int height, bool InitSRV /*= false*/, DXGI_FORMAT format /*= DXGI_FORMAT_D32_FLOAT*/, float clearDepth /*= 1*/, float clearStencil /*= 0 */)
+bool TextureDepth::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, int width, int height, bool InitSRV /*= false*/, DXGI_FORMAT format /*= DXGI_FORMAT_D32_FLOAT*/, float clearDepth /*= 0.0f*/, float clearStencil /*= 0 */)
 {
 	// Kiểm tra tính hợp lệ của Format (chỉ chấp nhận các format thuộc nhóm Depth Stencil)
 	if (format != DXGI_FORMAT_D32_FLOAT &&

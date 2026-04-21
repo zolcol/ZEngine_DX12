@@ -124,7 +124,7 @@ void ShadowPass::BeginRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t cu
 	cmdList->RSSetScissorRects(1, &scissorRect);
 
 	cmdList->OMSetRenderTargets(0, nullptr, false, &m_ShadowMaps[currentFrame]->GetDSVCpuHandle());
-	cmdList->ClearDepthStencilView(m_ShadowMaps[currentFrame]->GetDSVCpuHandle(), D3D12_CLEAR_FLAG_DEPTH, 1, 0, 0, nullptr);
+	cmdList->ClearDepthStencilView(m_ShadowMaps[currentFrame]->GetDSVCpuHandle(), D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 
 	// Cấu hình Pipeline State cho Shadow
 	cmdList->SetPipelineState(m_PSO->Get());

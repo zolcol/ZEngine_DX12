@@ -112,7 +112,8 @@ float CalculateShadow(float3 worldPos, LightData light)
         for(int y = -1; y <= 1; ++y)
         {
             float2 offset = float2(x, y) * texelSize;
-            shadow += GlobalTextures[light.ShadowMapIndex].SampleCmpLevelZero(ShadowSampler, projCoords.xy + offset, currentDepth - bias);
+            // Reverse Z: GreaterEqual means shadowDepth >= currentDepth + bias is LIT
+            shadow += GlobalTextures[light.ShadowMapIndex].SampleCmpLevelZero(ShadowSampler, projCoords.xy + offset, currentDepth + bias);
         }
     }
     shadow /= 9.0;

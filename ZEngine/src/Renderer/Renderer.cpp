@@ -152,7 +152,7 @@ void Renderer::BeginFrame(Scene* scene)
 
 	commandList->OMSetRenderTargets(1, &m_Swapchain->GetCurrentRTVCpuHandle(), false, &m_DepthTexture->GetDSVCpuHandle());
 	commandList->ClearRenderTargetView(m_Swapchain->GetCurrentRTVCpuHandle(), clearColor, 0, nullptr);
-	commandList->ClearDepthStencilView(m_DepthTexture->GetDSVCpuHandle(), D3D12_CLEAR_FLAG_DEPTH, 1, 0, 0, nullptr);
+	commandList->ClearDepthStencilView(m_DepthTexture->GetDSVCpuHandle(), D3D12_CLEAR_FLAG_DEPTH, 0.0f, 0, 0, nullptr);
 
 	// View port
 	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)m_Width, (float)m_Height);

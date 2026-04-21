@@ -15,7 +15,7 @@ public:
 	bool Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager,
 		int width, int height, bool InitSRV = false, 
 		DXGI_FORMAT format = DXGI_FORMAT_D32_FLOAT,
-		float clearDepth = 1, float clearStencil = 0
+		float clearDepth = 0, float clearStencil = 0
 	);
 private:
 	uint32_t m_DSVIndex;

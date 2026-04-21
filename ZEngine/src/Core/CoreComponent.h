@@ -137,8 +137,16 @@ struct CameraComponent
 
 	[[nodiscard]] DirectX::XMMATRIX GetProjectionMatrix(float aspectRatio) const
 	{
-		// Chuyển FOV từ độ sang Radian để dùng với XMMatrixPerspectiveFovLH
-		return DirectX::XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(FOV), aspectRatio, NearPlane, FarPlane);
+		// Reverse-Z Perspective Projection
+		// Standard: m33 = f/(f-n), m43 = -fn/(f-n)
+		// Reverse:  m33 = n/(n-f), m43 = -fn/(n-f) = fn/(f-n)
+		
+		DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH(DirectX::XMConvertToRadians(FOV), aspectRatio, NearPlane, FarPlane);
+		
+		proj.r[2].m128_f32[2] = NearPlane / (NearPlane - FarPlane);
+		proj.r[3].m128_f32[2] = (FarPlane * NearPlane) / (FarPlane - NearPlane);
+		
+		return proj;
 	}
 
 	void Inspect()
@@ -196,13 +204,22 @@ struct LightComponent
 		XMMATRIX proj;
 		if (Type == LightType::Directional)
 		{
-			// Tạm thời dùng Ortho cố định cho Directional Light Shadow (Khu vực hẹp để tăng độ sắc nét)
-			proj = XMMatrixOrthographicLH(5.0f, 5.0f, 0.1f, 100.0f);
+			// Reverse Z for Orthographic
+			// Standard: m33 = 1/(f-n), m43 = -n/(f-n)
+			// Reverse: m33 = -1/(f-n), m43 = f/(f-n)
+			float nearP = 0.1f;
+			float farP = 100.0f;
+			proj = XMMatrixOrthographicLH(10.0f, 10.0f, nearP, farP);
+			proj.r[2].m128_f32[2] = -1.0f / (farP - nearP);
+			proj.r[3].m128_f32[2] = farP / (farP - nearP);
 		}
 		else if (Type == LightType::Spot)
 		{
-			// FOV của Spot light shadow là 2 lần OuterAngle
-			proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(OuterAngle * 2.0f), 1.0f, 0.1f, Range);
+			float nearP = 0.1f;
+			float farP = Range;
+			proj = XMMatrixPerspectiveFovLH(XMConvertToRadians(OuterAngle * 2.0f), 1.0f, nearP, farP);
+			proj.r[2].m128_f32[2] = nearP / (nearP - farP);
+			proj.r[3].m128_f32[2] = -(farP * nearP) / (nearP - farP);
 		}
 		else
 		{
