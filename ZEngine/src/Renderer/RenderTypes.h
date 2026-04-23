@@ -55,3 +55,26 @@ struct ObjectData
 {
 	XMMATRIX WorldTransform;
 };
+
+// ==========================================
+// ROOT SIGNATURE SLOTS
+// Định nghĩa cố định vị trí các tham số trong Root Signature
+// ==========================================
+enum RootSlot
+{
+	Slot_RootConstants = 0, // b0, space1 (MaterialID, ObjectIndex, LightCount)
+	
+	// Root Descriptors (CBV/SRV/UAV trực tiếp - Tốc độ cao)
+	Slot_GlobalCBV     = 1, // b0, space2 (Camera, Time)
+	Slot_ShadowCBV     = 2, // b1, space2 (Light View/Proj)
+	Slot_MaterialSRV   = 3, // t0, space2 (StructuredBuffer Materials)
+	Slot_ObjectSRV     = 4, // t1, space2 (StructuredBuffer ObjectData)
+	Slot_LightSRV      = 5, // t2, space2 (StructuredBuffer Lights)
+
+	// Descriptor Tables (Bindless - Cho số lượng lớn)
+	Slot_CBVTable      = 6, // space0 (Chưa dùng nhiều)
+	Slot_SRVTable      = 7, // space0 (Textures bindless)
+	Slot_UAVTable      = 8, // space0
+	
+	Count
+};

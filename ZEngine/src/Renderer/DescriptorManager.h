@@ -1,5 +1,6 @@
 #pragma once
 #include "DescriptorAllocator.h"
+#include "RenderTypes.h"
 
 class Buffer;
 
@@ -18,26 +19,14 @@ public:
 	// ==========================================
 	bool Init(ID3D12Device* device, uint32_t frameCount);
 
-	// Đăng ký Root CBV (Tốc độ cao nhất, dùng cho Global Data như Camera/Time)
-	void CreateRootCBV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
-	void CreateRootCBVPerFrame(const std::vector<std::unique_ptr<Buffer>>& buffers
-		, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+	// Gán tài nguyên vào Slot (Descriptor Manager sẽ lưu lại để Bind mỗi frame)
+	void SetRootCBV(RootSlot slot, D3D12_GPU_VIRTUAL_ADDRESS address);
+	void SetRootCBVPerFrame(RootSlot slot, uint32_t frameIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
 	
-	// Đăng ký Root SRV (Chủ đích hiện tại cho Structured Buffer như Material)
-	void CreateRootSRV(Buffer* buffer, UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
-	void CreateRootSRVPerFrame(const std::vector<std::unique_ptr<Buffer>>& buffers, 
-		UINT baseRegister, UINT space, D3D12_ROOT_DESCRIPTOR_FLAGS flags, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
+	void SetRootSRV(RootSlot slot, D3D12_GPU_VIRTUAL_ADDRESS address);
+	void SetRootSRVPerFrame(RootSlot slot, uint32_t frameIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
 
-	// Đăng ký Root Constant 
-	void CreateRootConstants(UINT num32BitValues, UINT shaderRegister, UINT registerSpace = 1, D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL);
-
-	// Gọi hàm này sau cùng để đóng gói 3 bảng Unbound (CBV, SRV, UAV) vào Root Signature
-	void SetupStandardDescriptorTables();
-
-	// Cung cấp Layout cho lớp RootSignature
-	const std::vector<CD3DX12_ROOT_PARAMETER1>& GetRootParams() const { return m_RootParams; }
-
-	// Cung cấp Static Sampler cho RootSignature
+	// Cung cấp Static Sampler cho RootSignature (Vẫn giữ nguyên vì sampler là tĩnh)
 	const std::vector<CD3DX12_STATIC_SAMPLER_DESC>& GetStaticSamplers() const { return m_StaticSamplers; }
 
 	// ==========================================
@@ -76,25 +65,13 @@ private:
 	// ------------------------------------------
 	// Root Signature Data
 	// ------------------------------------------
-	// Layout tĩnh cho Root Signature
-	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootParams;
-	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootCBVParams;
-	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootSRVParams;
-	std::vector<CD3DX12_ROOT_PARAMETER1> m_RootConstantParams;
-
 	// Static Sampler
 	std::vector<CD3DX12_STATIC_SAMPLER_DESC> m_StaticSamplers;
-	
-	// Các Ranges cho 3 bảng Unbound khổng lồ (Bindless Architecture)
-	CD3DX12_DESCRIPTOR_RANGE1 m_TableRanges[3];
-	uint32_t m_TableParamStartIndex = 0;
-	uint32_t m_CBVParamStartIndex = 0;
-	uint32_t m_SRVParamStartIndex = 0;
 	
 	// ------------------------------------------
 	// Dynamic Data (Per-Frame Values)
 	// ------------------------------------------
-	// m_RootCBVsAddress[frameIndex][paramIndex]
-	std::vector<std::vector<D3D12_GPU_VIRTUAL_ADDRESS>> m_RootCBVsAddress;
-	std::vector<std::vector<D3D12_GPU_VIRTUAL_ADDRESS>>	m_RootSRVsAddress;
+	// Lưu trữ địa chỉ GPU cho từng Slot, cho từng Frame
+	// m_SlotAddresses[frameIndex][slotIndex]
+	std::vector<std::array<D3D12_GPU_VIRTUAL_ADDRESS, RootSlot::Count>> m_SlotAddresses;
 };

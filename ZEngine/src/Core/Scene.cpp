@@ -10,7 +10,7 @@
 Scene::Scene(Renderer* renderer)
 {
 	m_ModelManager = renderer->GetModelManager();
-	renderer->ConnnetToScene(m_Registry);
+	renderer->ConnectToScene(m_Registry);
 }
 
 Scene::~Scene() = default;

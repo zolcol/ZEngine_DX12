@@ -45,9 +45,9 @@ void ShadowPass::InitConstantBuffer(ID3D12Device* device, DescriptorManager* des
 			bufferSize,
 			D3D12_HEAP_TYPE_UPLOAD
 		);
-	}
 
-	descriptorManager->CreateRootCBVPerFrame(m_ShadowConstantBuffers, 1, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_VERTEX);
+		descriptorManager->SetRootCBVPerFrame(Slot_ShadowCBV, (uint32_t)i, m_ShadowConstantBuffers[i]->GetGpuAddress());
+	}
 }
 
 void ShadowPass::InitShadowMapsTexture(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, uint32_t frameCount)

@@ -23,7 +23,7 @@ void ModelManager::Init(ID3D12Device* device, CommandContext* commandContext, De
 	m_IndexBuffer->Init(device, sizeof(uint32_t) * MAX_INDICES, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
 	m_MaterialBuffer->Init(m_Device, MAX_MATERIALS * sizeof(MaterialData), D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
 
-	m_DescriptorManager->CreateRootSRV(m_MaterialBuffer.get(), 0, 2, D3D12_ROOT_DESCRIPTOR_FLAG_NONE, D3D12_SHADER_VISIBILITY_PIXEL);
+	m_DescriptorManager->SetRootSRV(Slot_MaterialSRV, m_MaterialBuffer->GetGpuAddress());
 }
 
 void ModelManager::UploadMaterialBuffer()
