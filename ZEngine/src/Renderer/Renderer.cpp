@@ -20,6 +20,7 @@
 #include "Core/CoreComponent.h"
 #include "Core/RenderComponent.h"
 #include "Core/Editor.h"
+#include "Core/MipmapManager.h"
 
 // =====================================================================
 // CONSTRUCTOR / DESTRUCTOR
@@ -52,9 +53,6 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	// 2. Resource Managers
 	m_DescriptorManager = std::make_unique<DescriptorManager>();
 	m_DescriptorManager->Init(m_Device->GetDevice(), m_FramesInFlight);
-
-	m_ModelManager = std::make_unique<ModelManager>();
-	m_ModelManager->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get());
 
 	// 3. Presentation (Swapchain)
 	SwapChainConfig swConfig{};
@@ -97,6 +95,12 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_PSO->Init(m_Device->GetDevice(), *m_RootSign, psoConfig);
 
 	m_ShadowPass->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), m_RootSign.get(), m_FramesInFlight, m_Width, m_Height);
+
+	m_MipmapManager = std::make_unique<MipmapManager>();
+	m_MipmapManager->Init(m_Device->GetDevice(), m_DescriptorManager.get());
+
+	m_ModelManager = std::make_unique<ModelManager>();
+	m_ModelManager->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), m_MipmapManager.get());
 
 	ENGINE_INFO("Renderer initialized successfully.");
 	return true;
@@ -142,7 +146,7 @@ void Renderer::BeginFrame(Scene* scene)
 
 	// 4. Shadow Pass
 	m_ShadowPass->BeginRenderPass(commandList, m_CurrentFrame, m_ModelManager.get(), scene);
-	m_ShadowPass->RenderingPass(commandList, scene);
+	m_ShadowPass->RenderingPass(commandList, scene, m_CurrentFrame);
 	m_ShadowPass->EndRenderPass(commandList, m_CurrentFrame);
 
 	// 5. Main Pass Transition

@@ -35,6 +35,7 @@ public:
 	// Xin slot cho View. Các hàm này trả về một Index dùng để Shader truy cập (Bindless).
 	uint32_t CreateCBV(Buffer* buffer);
 	uint32_t CreateSRV(ID3D12Resource* texture, const CD3DX12_SHADER_RESOURCE_VIEW_DESC* srvDesc);
+	uint32_t CreateUAV(ID3D12Resource* texture, const CD3DX12_UNORDERED_ACCESS_VIEW_DESC* uavDesc);
 	uint32_t CreateRTV(ID3D12Resource* resource, const D3D12_RENDER_TARGET_VIEW_DESC* rtvDesc = nullptr);
 	uint32_t CreateDSV(ID3D12Resource* resource, const D3D12_DEPTH_STENCIL_VIEW_DESC* dsvDesc = nullptr);
 	
@@ -48,6 +49,11 @@ public:
 	// Lấy địa chỉ CPU an toàn của RTV/DSV để dùng cho hàm OMSetRenderTargets
 	D3D12_CPU_DESCRIPTOR_HANDLE GetRTVCPUHandle(uint32_t index);
 	D3D12_CPU_DESCRIPTOR_HANDLE GetDSVCPUHandle(uint32_t index);
+
+	// Lấy địa chỉ của DescriptorHeap bindless. 
+	
+	D3D12_GPU_DESCRIPTOR_HANDLE GetDescriptorHeapGpuBase(D3D12_DESCRIPTOR_HEAP_TYPE type) const { return m_Allocators[type].GetBaseGpuHandle(); }
+	ID3D12DescriptorHeap* GetDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type) const { return m_Allocators[type].GetDescriptorHeap(); }
 
 private:
 	void InitStaticSamplers();

@@ -6,14 +6,14 @@
 #include "Renderer/CommandContext.h"
 #include "Renderer/DescriptorManager.h"
 #include "Model.h"
+#include "MipmapManager.h"
 
-
-
-void ModelManager::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager)
+void ModelManager::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, MipmapManager* mipmapManager)
 {
 	m_Device = device;
 	m_CommandContext = commandContext;
 	m_DescriptorManager = descriptorManager;
+	m_MipmapManager = mipmapManager;
 
 	m_VertexBuffer = std::make_unique<Buffer>();
 	m_IndexBuffer = std::make_unique<Buffer>();
@@ -114,7 +114,7 @@ uint32_t ModelManager::InitMaterial(const MaterialLoaderData& materialData)
 		}
 
 		std::unique_ptr<Texture2D> texture = std::make_unique<Texture2D>();
-		texture->Init(m_Device, m_CommandContext, m_DescriptorManager, filePath, format, type);
+		texture->Init(m_Device, m_CommandContext, m_DescriptorManager, m_MipmapManager, filePath, format, type);
 
 		uint32_t srvIndex = texture->GetSRVIndex();
 		

@@ -19,6 +19,7 @@ class Scene;
 class Editor;
 struct GPULightData;
 class ShadowPass;
+class MipmapManager;
 
 class Renderer
 {
@@ -73,6 +74,8 @@ private:
 
 	// --- Layer 4: Render Passes ---
 	std::unique_ptr<ShadowPass>     m_ShadowPass;
+
+	std::unique_ptr<MipmapManager>  m_MipmapManager;
 
 	// --- Layer 5: Resources (Dữ liệu thực tế) ---
 	std::unique_ptr<TextureDepth>             m_DepthTexture;

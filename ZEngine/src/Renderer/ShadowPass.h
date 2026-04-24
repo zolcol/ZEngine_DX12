@@ -22,7 +22,7 @@ public:
 		uint32_t frameCount, uint32_t frameWidth, uint32_t frameHeight);
 
 	void BeginRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t currentFrame, ModelManager* modelManager, Scene* scene);
-	void RenderingPass(ID3D12GraphicsCommandList* cmdList, Scene* scene);
+	void RenderingPass(ID3D12GraphicsCommandList* cmdList, Scene* scene, uint32_t currentFrame);
 	void EndRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t currentFrame);
 
 	void InitConstantBuffer(ID3D12Device* device, DescriptorManager* descriptorManager, uint32_t frameCount);
@@ -32,6 +32,8 @@ private:
 	uint32_t m_FrameWidth;
 	uint32_t m_FrameHeight;
 	RootSignature* m_RootSignature = nullptr;
+
+	std::vector<bool> m_FoundShadowLight;
 
 	ID3D12Device* m_Device;
 	CommandContext* m_CommandContext;

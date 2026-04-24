@@ -85,6 +85,7 @@
     <ClCompile Include="src\Core\EditorCameraController.cpp" />
     <ClCompile Include="src\Core\Input.cpp" />
     <ClCompile Include="src\Renderer\ShadowPass.cpp" />
+    <ClCompile Include="src\Core\MipmapManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">
@@ -160,6 +161,7 @@
     <ClInclude Include="src\Core\EditorCameraController.h" />
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Renderer\ShadowPass.h" />
+    <ClInclude Include="src\Core\MipmapManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

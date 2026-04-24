@@ -155,6 +155,7 @@ dxgi.lib
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Core\MipmapManager.cpp" />
     <ClCompile Include="src\Core\Model.cpp" />
     <ClCompile Include="src\Core\ModelLoader.cpp" />
     <ClCompile Include="src\Core\ModelManager.cpp" />
@@ -194,6 +195,7 @@ dxgi.lib
     <ClInclude Include="src\Core\Input.h" />
     <ClInclude Include="src\Core\Inspector.h" />
     <ClInclude Include="src\Core\Log.h" />
+    <ClInclude Include="src\Core\MipmapManager.h" />
     <ClInclude Include="src\Core\Model.h" />
     <ClInclude Include="src\Core\ModelLoader.h" />
     <ClInclude Include="src\Core\ModelManager.h" />
@@ -233,6 +235,11 @@ dxgi.lib
   </ItemGroup>
   <ItemGroup>
     <None Include="src\Renderer\Shaders\Shadow.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\Renderer\Shaders\GenerateMipmap.hlsl">
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

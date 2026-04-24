@@ -4,9 +4,10 @@
 #include "DescriptorManager.h"
 #include "Buffer.h"
 #include "CommandContext.h"
+#include "Core/MipmapManager.h"
 
-bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, 
-	const std::string& filePath, DXGI_FORMAT format, TextureType textureType)
+bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, MipmapManager* mipmapManager, 
+	const std::string& filePath, DXGI_FORMAT format /*= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB*/, TextureType textureType /*= ALBEDO*/, bool InitMipMap /*= true*/ )
 {
 	ImageData image(filePath);
 
@@ -40,13 +41,18 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 		}
 	}
 
+	if (InitMipMap)
+	{
+		m_MipLevels = (uint32_t)std::floor(std::log2(std::max(image.width, image.height))) + 1;
+	}
+
 	// Create Texture Resource
 	CD3DX12_RESOURCE_DESC texDesc;
 	texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 		format, image.width, image.height,
-		1, 1,
+		1, m_MipLevels,
 		1, 0,
-		D3D12_RESOURCE_FLAG_NONE,
+		m_MipLevels == 1 ? D3D12_RESOURCE_FLAG_NONE : D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN
 	);
 
@@ -72,13 +78,18 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_Resource.Get(),
 		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		0,
+		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 		D3D12_RESOURCE_BARRIER_FLAG_NONE
 	);
 
 	cmdList->ResourceBarrier(1, &barrier);
 
 	commandContext->EndImmediateCommand();
+
+	if (m_MipLevels > 1)
+	{
+		mipmapManager->InitMipmap(m_Resource.Get(), textureType, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, m_MipLevels, commandContext);
+	}
 
 	CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(texDesc.Format);

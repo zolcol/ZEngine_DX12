@@ -78,3 +78,11 @@ enum RootSlot
 	
 	Count
 };
+
+enum TextureType
+{
+	ALBEDO,
+	NORMAL,
+	ORM,
+	EMISSIVE
+};

@@ -25,6 +25,8 @@ void ShadowPass::Init(ID3D12Device* device, CommandContext* commandContext, Desc
 	m_Device = device;
 	m_CommandContext = commandContext;
 
+	m_FoundShadowLight.resize(frameCount, false);
+
 	InitShadowMapsTexture(device, commandContext, descriptorManager, frameCount);
 	InitPSO(device, rootSignature);
 }
@@ -83,10 +85,10 @@ void ShadowPass::InitPSO(ID3D12Device* device, RootSignature* rootSignature)
 
 void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* commandContext, Scene* scene, uint32_t currentFrame)
 {
-	bool foundShadowLight = false;
+	m_FoundShadowLight[currentFrame] = false;
 	scene->GetRegistry().view<TransformComponent, LightComponent>().each([&](const TransformComponent& transform, LightComponent& light)
 		{
-			if (foundShadowLight || !light.CastShadow) return;
+			if (m_FoundShadowLight[currentFrame] || !light.CastShadow) return;
 
 			m_ShadowConstantBufferDatas[currentFrame].PaddingPos = transform.Position;
 			
@@ -103,13 +105,19 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 				D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
 			);
 
-			foundShadowLight = true;
+			m_FoundShadowLight[currentFrame] = true;
 		}
 	);
 }
 
 void ShadowPass::BeginRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t currentFrame, ModelManager* modelManager, Scene* scene)
 {
+	// Update Constant Buffer
+	UpdateConstantBuffer(m_Device, m_CommandContext, scene, currentFrame);
+
+	if (!m_FoundShadowLight[currentFrame])
+		return;
+
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_ShadowMaps[currentFrame]->GetResource(),
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE
@@ -145,12 +153,14 @@ void ShadowPass::BeginRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t cu
 	idv.SizeInBytes = indexBuffer->GetBufferSize();
 	cmdList->IASetIndexBuffer(&idv);
 
-	// Update Constant Buffer
-	UpdateConstantBuffer(m_Device, m_CommandContext, scene, currentFrame);
+
 }
 
-void ShadowPass::RenderingPass(ID3D12GraphicsCommandList* cmdList, Scene* scene)
+void ShadowPass::RenderingPass(ID3D12GraphicsCommandList* cmdList, Scene* scene, uint32_t currentFrame)
 {
+	if (!m_FoundShadowLight[currentFrame])
+		return;
+
 	scene->GetRegistry().view<MeshComponent, TransformComponent, RenderIndexComponent>().
 		each([&](entt::entity entity,const MeshComponent& mesh, const TransformComponent& transform, const RenderIndexComponent& renderID)
 		{
@@ -171,6 +181,9 @@ void ShadowPass::RenderingPass(ID3D12GraphicsCommandList* cmdList, Scene* scene)
 
 void ShadowPass::EndRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t currentFrame)
 {
+	if (!m_FoundShadowLight[currentFrame])
+		return;
+
 	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_ShadowMaps[currentFrame]->GetResource(),
 		D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
