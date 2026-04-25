@@ -139,35 +139,29 @@ void Buffer::CopyStagingToBuffer(ID3D12Device* device, CommandContext* commandCo
 {
 	ID3D12GraphicsCommandList* cmdList = commandContext->BeginImmediateCommand();
 
-	CD3DX12_RESOURCE_BARRIER barrier;
-	
 	// Transition state của buffer đích sang COPY_DEST trước khi copy
-	if (m_CurrentState != D3D12_RESOURCE_STATE_COPY_DEST)
-	{
-		barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_Buffer.Get(),
-			m_CurrentState, D3D12_RESOURCE_STATE_COPY_DEST,
-			0, D3D12_RESOURCE_BARRIER_FLAG_NONE
-		);
-		m_CurrentState = D3D12_RESOURCE_STATE_COPY_DEST;
-		cmdList->ResourceBarrier(1, &barrier);
-	}
+	Transition(cmdList, D3D12_RESOURCE_STATE_COPY_DEST);
 
 	// Thực hiện lệnh copy trên GPU
 	cmdList->CopyBufferRegion(m_Buffer.Get(), offset, m_StagingBuffer.Get(), 0, uploadSize);
 
 	// Transition state của buffer đích về state theo yêu cầu của user
-	if (m_CurrentState != afterState)
-	{
-		barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_Buffer.Get(),
-			m_CurrentState, afterState,
-			0, D3D12_RESOURCE_BARRIER_FLAG_NONE
-		);
-		m_CurrentState = afterState;
-		cmdList->ResourceBarrier(1, &barrier);
-	}
+	Transition(cmdList, afterState);
 
 	// Flush command và block CPU chờ đến khi copy xong (Sync immediate)
 	commandContext->EndImmediateCommand();
+}
+
+void Buffer::Transition(ID3D12GraphicsCommandList* cmdList, D3D12_RESOURCE_STATES newState)
+{
+	if (m_CurrentState == newState) return;
+
+	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_Buffer.Get(),
+		m_CurrentState,
+		newState
+	);
+
+	m_CurrentState = newState;
+	cmdList->ResourceBarrier(1, &barrier);
 }

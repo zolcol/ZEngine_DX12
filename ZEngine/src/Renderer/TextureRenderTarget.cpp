@@ -23,6 +23,8 @@ bool TextureRenderTarget::Init(ID3D12Device* device, CommandContext* commandCont
 		IID_PPV_ARGS(&m_Resource)
 	));
 
+	m_CurrentState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
 	m_RTVIndex = descriptorManager->CreateRTV(m_Resource.Get());
 
 	if (InitSRV)

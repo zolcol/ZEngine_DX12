@@ -67,6 +67,8 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 		IID_PPV_ARGS(&m_Resource)
 	));
 
+	m_CurrentState = D3D12_RESOURCE_STATE_COPY_DEST;
+
 	UINT64 stagingBufferSize = GetRequiredIntermediateSize(m_Resource.Get(), 0, 1);
 
 	Buffer stagingBuffer;
@@ -74,15 +76,7 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 
 	ID3D12GraphicsCommandList* cmdList = stagingBuffer.UpdateDataToTexture(commandContext, image.pixels, m_Resource.Get(), image.width, image.height);
 
-	CD3DX12_RESOURCE_BARRIER barrier;
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_Resource.Get(),
-		D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-		D3D12_RESOURCE_BARRIER_FLAG_NONE
-	);
-
-	cmdList->ResourceBarrier(1, &barrier);
+	this->Transition(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 	commandContext->EndImmediateCommand();
 

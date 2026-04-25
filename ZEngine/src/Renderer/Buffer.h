@@ -24,6 +24,8 @@ public:
 	D3D12_GPU_VIRTUAL_ADDRESS GetGpuAddress() const { return m_Buffer->GetGPUVirtualAddress(); }
 	ID3D12Resource* GetResource() const { return m_Buffer.Get(); }
 
+	void Transition(ID3D12GraphicsCommandList* cmdList, D3D12_RESOURCE_STATES newState);
+
 private:
 	// ==========================================
 	// Internal Helpers

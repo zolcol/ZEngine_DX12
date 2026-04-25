@@ -62,6 +62,8 @@ bool TextureDepth::Init(ID3D12Device* device, CommandContext* commandContext, De
 		IID_PPV_ARGS(&m_Resource)
 	));
 
+	m_CurrentState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
 	if (InitSRV)
 	{
 		CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(srvFormat);

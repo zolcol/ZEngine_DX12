@@ -150,12 +150,7 @@ void Renderer::BeginFrame(Scene* scene)
 	m_ShadowPass->EndRenderPass(commandList, m_CurrentFrame);
 
 	// 5. Main Pass Transition
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_Swapchain->GetBackBuffer(m_CurrentBufferIndex),
-		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-	);
-	commandList->ResourceBarrier(1, &barrier);
+	m_Swapchain->Transition(commandList, m_CurrentBufferIndex, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 	// 6. Setup Render Targets & Clear
 	const float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
@@ -209,13 +204,16 @@ void Renderer::EndFrame(Scene* scene, Editor* editor)
 	// 1. Editor UI
 	editor->Render(commandList);
 
+	// Multi-Viewport support
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault(nullptr, (void*)commandList);
+	}
+
 	// 2. Final Transition & Close
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_Swapchain->GetBackBuffer(m_CurrentBufferIndex),
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PRESENT
-	);
-	commandList->ResourceBarrier(1, &barrier);
+	m_Swapchain->Transition(commandList, m_CurrentBufferIndex, D3D12_RESOURCE_STATE_PRESENT);
 	commandList->Close();
 
 	// 3. Execute
@@ -224,14 +222,6 @@ void Renderer::EndFrame(Scene* scene, Editor* editor)
 
 	// 4. Present
 	CHECK(m_Swapchain->GetSwapchain()->Present(1, 0));
-
-	// Multi-Viewport support
-	ImGuiIO& io = ImGui::GetIO();
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-	{
-		ImGui::UpdatePlatformWindows();
-		ImGui::RenderPlatformWindowsDefault(nullptr, (void*)commandList);
-	}
 
 	// 5. Signal next frame
 	m_Fence->Signal(m_CommandContext->GetCommandQueue(), ++m_FenceValue);

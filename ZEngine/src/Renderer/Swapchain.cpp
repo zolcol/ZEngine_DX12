@@ -54,3 +54,8 @@ void Swapchain::WaitForLatencyWaitableObject()
 {
 	WaitForSingleObject(m_WaitableObject, 1000);
 }
+
+void Swapchain::Transition(ID3D12GraphicsCommandList* cmdList, int bufferIndex, D3D12_RESOURCE_STATES newState)
+{
+	m_BackBuffers[bufferIndex]->Transition(cmdList, newState);
+}

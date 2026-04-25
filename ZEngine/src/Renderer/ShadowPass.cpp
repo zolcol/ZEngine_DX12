@@ -118,12 +118,7 @@ void ShadowPass::BeginRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t cu
 	if (!m_FoundShadowLight[currentFrame])
 		return;
 
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_ShadowMaps[currentFrame]->GetResource(),
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE
-		);
-
-	cmdList->ResourceBarrier(1, &barrier);
+	m_ShadowMaps[currentFrame]->Transition(cmdList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	// 👉 Thiết lập Viewport và Scissor đúng kích thước Shadow Map (2048x2048)
 	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)SHADOW_RESOLUTION, (float)SHADOW_RESOLUTION);
@@ -184,10 +179,5 @@ void ShadowPass::EndRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t curr
 	if (!m_FoundShadowLight[currentFrame])
 		return;
 
-	CD3DX12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_ShadowMaps[currentFrame]->GetResource(),
-		D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-	);
-
-	cmdList->ResourceBarrier(1, &barrier);
+	m_ShadowMaps[currentFrame]->Transition(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }

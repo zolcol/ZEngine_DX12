@@ -40,6 +40,8 @@ public:
 	// Lấy địa chỉ CPU của Render Target để sử dụng cho hàm OMSetRenderTargets
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetCurrentRTVCpuHandle() const { return m_BackBuffers[GetCurrentBackBufferIndex()]->GetRTVCpuHanlde(); }
 
+	void Transition(ID3D12GraphicsCommandList* cmdList, int bufferIndex, D3D12_RESOURCE_STATES newState);
+
 	void WaitForLatencyWaitableObject();
 
 private:
