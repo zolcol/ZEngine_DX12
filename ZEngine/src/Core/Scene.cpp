@@ -37,22 +37,39 @@ void Scene::InitModel()
 	light1.GetComponent<LightComponent>().Intensity = 5;
 	light1.GetComponent<TransformComponent>().Position = { -2.0f, 4.0f, -2.0f };
 	light1.GetComponent<TransformComponent>().SetEulerAnglesDegrees({ 45.0f, 45.0f, 0.0f });
-	light1.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/Arrow/scene.gltf", { 0.1f, 0.1f, 0.1f }, { 0, -90, 0}));
-	light1.AddComponent<RenderIndexComponent>();
+	
+	Model* arrowModel = m_ModelManager->InitModel("Resources/Models/Arrow/scene.gltf", { 0.1f, 0.1f, 0.1f }, { 0, -90, 0 });
+	if (arrowModel)
+	{
+		light1.AddComponent<MeshComponent>(arrowModel);
+		light1.AddComponent<RenderIndexComponent>();
+	}
 
 	Entity m_ElfGirl = CreateEntity("Elf Girl");
-	m_ElfGirl.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/Elf/scene.gltf", { 0.01, 0.01, 0.01 }, { 90, 0, 0}));
-	m_ElfGirl.AddComponent<RenderIndexComponent>();
+	Model* elfModel = m_ModelManager->InitModel("Resources/Models/Elf/scene.gltf", { 0.01, 0.01, 0.01 }, { 90, 0, 0 });
+	if (elfModel)
+	{
+		m_ElfGirl.AddComponent<MeshComponent>(elfModel);
+		m_ElfGirl.AddComponent<RenderIndexComponent>();
+	}
 	m_ElfGirl.GetComponent<TransformComponent>().Position = { 0.5, 0, 0 };
 
 	Entity m_AnimeGirl = CreateEntity("Anime Girl");
-	m_AnimeGirl.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/Girl/scene.gltf"));
-	m_AnimeGirl.AddComponent<RenderIndexComponent>();
+	Model* girlModel = m_ModelManager->InitModel("Resources/Models/Girl/scene.gltf");
+	if (girlModel)
+	{
+		m_AnimeGirl.AddComponent<MeshComponent>(girlModel);
+		m_AnimeGirl.AddComponent<RenderIndexComponent>();
+	}
 	m_AnimeGirl.GetComponent<TransformComponent>().Position = { -0.5, 0, 0 };
 
 	Entity m_KnightGirl = CreateEntity("Knight Girl");
-	m_KnightGirl.AddComponent<MeshComponent>(m_ModelManager->InitModel("Resources/Models/KnightGirl/scene.gltf", { 0.02, 0.02, 0.02 }, { 90, 0, 0 }));
-	m_KnightGirl.AddComponent<RenderIndexComponent>();
+	Model* knightModel = m_ModelManager->InitModel("Resources/Models/KnightGirl/scene.gltf", { 0.02, 0.02, 0.02 }, { 90, 0, 0 });
+	if (knightModel)
+	{
+		m_KnightGirl.AddComponent<MeshComponent>(knightModel);
+		m_KnightGirl.AddComponent<RenderIndexComponent>();
+	}
 	m_KnightGirl.GetComponent<TransformComponent>().Position = { -1, 0, 0 };
 
 	m_ModelManager->UploadMaterialBuffer();

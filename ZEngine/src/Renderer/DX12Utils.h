@@ -27,6 +27,20 @@ inline std::string WStringToString(const std::wstring & wstr)
 	return strTo;
 }
 
+// Hàm chuyển đổi char* (UTF-8) sang wchar_t*
+inline std::wstring StringToWString(const std::string& str)
+{
+	if (str.empty()) return std::wstring();
+
+	// Tính toán kích thước cần thiết
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+
+	// Đổ dữ liệu sang chuỗi std::wstring
+	std::wstring wstrTo(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+	return wstrTo;
+}
+
 // Hàm chuyển đổi HR sang tiếng người
 inline std::string HRToString(const HRESULT& hr)
 {

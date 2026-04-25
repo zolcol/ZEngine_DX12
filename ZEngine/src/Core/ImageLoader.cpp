@@ -1,47 +1,28 @@
 #include "pch.h"
 #include "ImageLoader.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 ImageData::ImageData(const std::string& filePath)
 {
-	pixels = stbi_load(filePath.c_str(), &width, &height, &chanel, 4);
+	if (filePath.empty()) return;
 
-	if (!pixels && !filePath.empty())
+	scratchImage = std::make_unique<DirectX::ScratchImage>();
+	std::wstring wPath = StringToWString(filePath);
+
+	// Chỉ hỗ trợ nạp file DDS
+	HRESULT hr = DirectX::LoadFromDDSFile(wPath.c_str(), DirectX::DDS_FLAGS_NONE, &metaData, *scratchImage);
+
+	if (FAILED(hr))
 	{
-		ENGINE_ERROR("Failed To Load Image At: {}", filePath);
+		// Nếu nạp thất bại, giải phóng vùng nhớ. Texture2D sẽ lo việc fallback.
+		scratchImage.reset();
+		return;
+	}
+
+	if (scratchImage->GetImageCount() == 0)
+	{
+		ENGINE_ERROR("DDS file contains no data: {}", filePath);
+		scratchImage.reset();
 	}
 }
 
-ImageData::~ImageData()
-{
-	if (pixels)
-	{
-		stbi_image_free(pixels);
-		pixels = nullptr;
-	}
-}
-
-ImageData::ImageData(ImageData&& other) noexcept:
-	width(other.width), height(other.height), chanel(other.chanel), pixels(other.pixels)
-{
-	other.pixels = nullptr;
-}
-
-ImageData& ImageData::operator=(ImageData&& other) noexcept
-{
-	if (&other != this)
-	{
-		stbi_image_free(pixels);
-
-		pixels = other.pixels;
-		width = other.width;
-		height = other.height;
-		chanel = other.chanel;
-
-		other.pixels = nullptr;
-	}
-
-	return *this;
-}
+ImageData::~ImageData() = default;

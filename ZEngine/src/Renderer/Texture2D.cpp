@@ -4,14 +4,14 @@
 #include "DescriptorManager.h"
 #include "Buffer.h"
 #include "CommandContext.h"
-#include "Core/MipmapManager.h"
 
-bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, MipmapManager* mipmapManager, 
-	const std::string& filePath, DXGI_FORMAT format /*= DXGI_FORMAT_R8G8B8A8_UNORM_SRGB*/, TextureType textureType /*= ALBEDO*/, bool InitMipMap /*= true*/ )
+bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, 
+	const std::string& filePath, TextureType textureType)
 {
-	ImageData image(filePath);
+	ImageData imageData(filePath);
 
-	if (!image.pixels)
+	// Fallback sang texture mặc định nếu nạp ảnh thất bại
+	if (!imageData.IsValid())
 	{
 		std::string typeStr;
 		switch (textureType)
@@ -23,71 +23,66 @@ bool Texture2D::Init(ID3D12Device* device, CommandContext* commandContext, Descr
 		default:       typeStr = "UNKNOWN"; break;
 		}
 
-		if (filePath.empty())
-		{
-			ENGINE_INFO("No {} texture provided in model. Loading default.", typeStr);
-		}
-		else
-		{
-			ENGINE_ERROR("Failed to find {} texture file at: {}. Loading default.", typeStr, filePath);
-		}
-		
-		image = ImageData(DEFAULT_TEXTURE_PATH[textureType]);
+		ENGINE_WARN("Failed to load {} texture: {}. Falling back to default.", typeStr, filePath);
+		imageData = ImageData(DEFAULT_TEXTURE_PATH[textureType]);
 
-		if (!image.pixels)
+		if (!imageData.IsValid())
 		{
-			ENGINE_FATAL("CRITICAL ERROR: Failed to load DEFAULT {} texture from: {}. Please ensure your 'Resources' folder is correctly set up!", typeStr, DEFAULT_TEXTURE_PATH[textureType]);
+			ENGINE_FATAL("CRITICAL ERROR: Default texture missing: {}", DEFAULT_TEXTURE_PATH[textureType]);
 			return false;
 		}
 	}
 
-	if (InitMipMap)
-	{
-		m_MipLevels = (uint32_t)std::floor(std::log2(std::max(image.width, image.height))) + 1;
-	}
+	m_MipLevels = (uint32_t)imageData.metaData.mipLevels;
 
-	// Create Texture Resource
-	CD3DX12_RESOURCE_DESC texDesc;
-	texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-		format, image.width, image.height,
-		1, m_MipLevels,
+	CD3DX12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+		imageData.metaData.format,
+		(UINT64)imageData.metaData.width,
+		(UINT)imageData.metaData.height,
+		(UINT16)imageData.metaData.arraySize,
+		(UINT16)m_MipLevels,
 		1, 0,
-		m_MipLevels == 1 ? D3D12_RESOURCE_FLAG_NONE : D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS,
+		D3D12_RESOURCE_FLAG_NONE,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN
 	);
 
 	CD3DX12_HEAP_PROPERTIES heapProp(D3D12_HEAP_TYPE_DEFAULT);
 
-	CHECK(device->CreateCommittedResource(
-		&heapProp,
-		D3D12_HEAP_FLAG_NONE,
-		&texDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST,
+	HRESULT hr = device->CreateCommittedResource(
+		&heapProp, D3D12_HEAP_FLAG_NONE,
+		&texDesc, D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(&m_Resource)
-	));
+	);
+
+	if (FAILED(hr))
+	{
+		ENGINE_ERROR("Texture2D: Failed to create GPU Resource for: {} (HRESULT: 0x{:08X})", filePath, (unsigned int)hr);
+		return false;
+	}
 
 	m_CurrentState = D3D12_RESOURCE_STATE_COPY_DEST;
 
-	UINT64 stagingBufferSize = GetRequiredIntermediateSize(m_Resource.Get(), 0, 1);
+	// Copy dữ liệu từ RAM lên GPU Staging Buffer
+	uint32_t subresourceCount = (uint32_t)(imageData.metaData.mipLevels * imageData.metaData.arraySize);
+	UINT64 stagingBufferSize = GetRequiredIntermediateSize(m_Resource.Get(), 0, subresourceCount);
 
 	Buffer stagingBuffer;
-	stagingBuffer.Init(device, stagingBufferSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-
-	ID3D12GraphicsCommandList* cmdList = stagingBuffer.UpdateDataToTexture(commandContext, image.pixels, m_Resource.Get(), image.width, image.height);
-
-	this->Transition(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-	commandContext->EndImmediateCommand();
-
-	if (m_MipLevels > 1)
+	if (!stagingBuffer.Init(device, (uint32_t)stagingBufferSize, D3D12_HEAP_TYPE_UPLOAD))
 	{
-		mipmapManager->InitMipmap(m_Resource.Get(), textureType, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, m_MipLevels, commandContext);
+		ENGINE_ERROR("Texture2D: Failed to create staging buffer for: {}", filePath);
+		return false;
 	}
 
-	CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(texDesc.Format);
+	ID3D12GraphicsCommandList* cmdList = stagingBuffer.UpdateDataToTexture(device, commandContext, &imageData, m_Resource.Get());
+	if (cmdList)
+	{
+		this->Transition(cmdList, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		commandContext->EndImmediateCommand();
+	}
 
+	// Tạo Descriptor (SRV) cho Texture
+	CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(texDesc.Format);
 	m_SRVIndex = descriptorManager->CreateSRV(m_Resource.Get(), &srvDesc);
 
 	return true;

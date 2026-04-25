@@ -18,7 +18,7 @@ void MipmapManager::Init(ID3D12Device* device, DescriptorManager* descriptorMana
 	pipelineDesc.pRootSignature = m_RootSignature.Get();
 	pipelineDesc.CS = { m_ComputeShader->GetBufferPointer(), m_ComputeShader->GetBufferSize() };
 	pipelineDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
+	
 	CHECK(device->CreateComputePipelineState(&pipelineDesc, IID_PPV_ARGS(&m_PSO)));
 }
 

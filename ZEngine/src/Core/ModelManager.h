@@ -29,7 +29,7 @@ public:
 
 	MaterialData GetMaterial(uint32_t index) const { return m_Materials[index]; }
 
-	void Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, MipmapManager* mipmapManager);
+	void Init(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager);
 	void UploadMaterialBuffer();
 	
 	Model* InitModel(const std::string& filePath, 
@@ -45,7 +45,6 @@ private:
 	ID3D12Device* m_Device;
 	CommandContext* m_CommandContext;
 	DescriptorManager* m_DescriptorManager;
-	MipmapManager* m_MipmapManager;
 
 	std::vector<std::unique_ptr<Model>> m_Models;
 	std::vector<std::unique_ptr<Texture2D>> m_Textures;

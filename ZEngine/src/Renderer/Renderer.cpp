@@ -100,7 +100,7 @@ bool Renderer::Init(HWND hwnd, int width, int height, uint32_t frameCount)
 	m_MipmapManager->Init(m_Device->GetDevice(), m_DescriptorManager.get());
 
 	m_ModelManager = std::make_unique<ModelManager>();
-	m_ModelManager->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get(), m_MipmapManager.get());
+	m_ModelManager->Init(m_Device->GetDevice(), m_CommandContext.get(), m_DescriptorManager.get());
 
 	ENGINE_INFO("Renderer initialized successfully.");
 	return true;

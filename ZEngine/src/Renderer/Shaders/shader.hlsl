@@ -251,8 +251,12 @@ float4 PSMain(PixelInput input) : SV_TARGET
     float3 B = cross(N, T) * input.tangent.w;
     float3x3 TBN = float3x3(T, B, N);
 
-    float3 normalMap = GlobalTextures[mat.NormalTextureID].Sample(LinearWrapSampler, input.uv).rgb;
-    normalMap = normalMap * 2.0 - 1.0;
+    float3 normalMap;
+    
+    normalMap.xy = GlobalTextures[mat.NormalTextureID].Sample(LinearWrapSampler, input.uv).rg;
+    normalMap.xy = normalMap.xy * 2.0 - 1.0;
+    
+    normalMap.z = sqrt(saturate(1.0 - dot(normalMap.xy, normalMap.xy)));
     normalMap = normalize(normalMap);
     N = normalize(mul(normalMap, TBN));
 
