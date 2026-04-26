@@ -304,6 +304,13 @@ void Renderer::UpdateConstantBuffersData(int currentFrame, Scene* scene)
 		}
 	});
 
+	EnvironmentComponent& envComponent = scene->GetRegistry().ctx().get<EnvironmentComponent>();
+	m_ConstantBuffersData[currentFrame].BrdfLutSRVIndex = envComponent.BrdfLutSRVIndex;
+	m_ConstantBuffersData[currentFrame].IrradianceSRVIndex = envComponent.IrradianceSRVIndex;
+	m_ConstantBuffersData[currentFrame].PrefilteredSRVIndex = envComponent.PrefilteredSRVIndex;
+	m_ConstantBuffersData[currentFrame].SkyboxSRVIndex = envComponent.SkyboxSRVIndex;
+	m_ConstantBuffersData[currentFrame].IBLIntensity = envComponent.IBLIntensity;
+
 	m_ConstantBuffersData[currentFrame].CameraPos = cameraPos;
 	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ViewMatrix, XMMatrixTranspose(viewMatrix));
 	XMStoreFloat4x4(&m_ConstantBuffersData[currentFrame].ProjectionMatrix, XMMatrixTranspose(projMatrix));

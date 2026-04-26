@@ -23,17 +23,24 @@ static const float INV_PI = 0.31830988618;
 // ==========================================
 
 Texture2D<float4> GlobalTextures[10000] : register(t0, space0);
+TextureCube<float4> GlobalCubeTextures[1000] : register(t0, space3);
 
 SamplerState LinearWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
 SamplerComparisonState ShadowSampler : register(s2);
+SamplerState LinearClampSampler : register(s3);
 
 cbuffer TransformBuffer : register(b0, space2)
 {
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
     float3 CameraPos;
-    float Padding;
+    uint SkyboxSRVIndex;
+
+    uint IrradianceSRVIndex;
+    uint PrefilteredSRVIndex;
+    uint BrdfLutSRVIndex;
+    float IBLIntensity;
 };
 
 cbuffer MaterialBuffer : register(b0, space1)
@@ -63,9 +70,9 @@ struct LightData
     float3 Position;
     float Range;
     float3 Direction;
-    int Type; // 0: Directional, 1: Point, 2: Spot
-    float InnerAngle; // cos(innerAngle)
-    float OuterAngle; // cos(outerAngle)
+    int Type;
+    float InnerAngle;
+    float OuterAngle;
     int ShadowMapIndex;
     float _Pad;
     float4x4 LightViewProj;
@@ -76,7 +83,7 @@ StructuredBuffer<ObjectData> GlobalObjectData : register(t1, space2);
 StructuredBuffer<LightData> GlobalLights : register(t2, space2);
 
 // ==========================================
-// SHADOW: Poisson Disk 16-Tap + Normal Offset
+// SHADOW
 // ==========================================
 
 static const float2 PoissonDisk[16] =
@@ -109,12 +116,10 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     if (light.ShadowMapIndex < 0)
         return 1.0;
 
-    // Lấy kích thước thực tế của Shadow Map từ Texture
     float width, height;
     GlobalTextures[light.ShadowMapIndex].GetDimensions(width, height);
     float2 texelSize = 1.0 / float2(width, height);
 
-    // Normal-Offset Bias logic from Shader 2
     float NoL = clamp(dot(N, L), 0.0, 1.0);
     float3 biasPos = worldPos + N * (1.0 - NoL) * 0.05;
 
@@ -123,18 +128,15 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
     projCoords.y = 1.0 - projCoords.y;
 
-    // Frustum check
     if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
         return 1.0;
 
     float currentDepth = projCoords.z;
     float bias = 0.0003;
 
-    // Poisson rotation per pixel
     float noise = InterleavedGradientNoise(screenPos) * 2.0 * PI;
     float2x2 rot = RotationMatrix(noise);
     
-    // Spread tính theo đơn vị texel (ví dụ nhòe ra 1.5 pixels)
     float spread = 1.5;
     float2 spreadVec = spread * texelSize;
 
@@ -153,7 +155,7 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
 }
 
 // ==========================================
-// PBR: Cook-Torrance BRDF
+// PBR
 // ==========================================
 
 float DistributionGGX(float NdotH, float roughness)
@@ -215,9 +217,12 @@ PixelInput VSMain(VertexInput input)
     output.worldPos = worldPos.xyz;
     output.position = mul(mul(worldPos, ViewMatrix), ProjectionMatrix);
     
-    float3x3 normalMatrix = (float3x3) WorldMatrix;
-    output.normal = normalize(mul(input.normal, normalMatrix));
-    output.tangent = float4(normalize(mul(input.tangent.xyz, normalMatrix)), input.tangent.w);
+    // Inverse transpose để normal đúng khi có non-uniform scale
+    float3x3 W = (float3x3) WorldMatrix;
+    float3x3 invTransposeWorld = transpose(W);
+    // Approximate: chỉ đúng hoàn toàn khi không có shear, nhưng đủ dùng cho game
+    output.normal = normalize(mul(input.normal, W));
+    output.tangent = float4(normalize(mul(input.tangent.xyz, W)), input.tangent.w);
     output.uv = input.uv;
 
     return output;
@@ -231,7 +236,7 @@ float4 PSMain(PixelInput input) : SV_TARGET
 {
     MaterialData mat = GlobalMaterials[MaterialID];
 
-    // Texture fetching
+    // Textures
     float4 albedoSample = GlobalTextures[mat.AlbedoTextureID].Sample(LinearWrapSampler, input.uv);
     float3 albedo = albedoSample.rgb;
 
@@ -242,30 +247,26 @@ float4 PSMain(PixelInput input) : SV_TARGET
 
     float3 emissive = GlobalTextures[mat.EmissiveTextureID].Sample(LinearWrapSampler, input.uv).rgb;
 
-    // Build TBN 
+    // TBN
     float3 N = normalize(input.normal);
     float3 T = normalize(input.tangent.xyz);
-    
-    // Gram-Schmidt
     T = normalize(T - dot(T, N) * N);
     float3 B = cross(N, T) * input.tangent.w;
     float3x3 TBN = float3x3(T, B, N);
 
-    float3 normalMap;
-    
-    normalMap.xy = GlobalTextures[mat.NormalTextureID].Sample(LinearWrapSampler, input.uv).rg;
-    normalMap.xy = normalMap.xy * 2.0 - 1.0;
-    
-    normalMap.z = sqrt(saturate(1.0 - dot(normalMap.xy, normalMap.xy)));
-    normalMap = normalize(normalMap);
-    N = normalize(mul(normalMap, TBN));
+    float3 normalSample;
+    normalSample.xy = GlobalTextures[mat.NormalTextureID].Sample(LinearWrapSampler, input.uv).rg * 2.0 - 1.0;
+    normalSample.z = sqrt(saturate(1.0 - dot(normalSample.xy, normalSample.xy)));
+    N = normalize(mul(normalSample, TBN));
 
-    // Common vectors
+    // Common
     float3 V = normalize(CameraPos - input.worldPos);
-    float NdotV = max(dot(N, V), 0.0);
+    float NdotV = max(dot(N, V), 1e-4);
     float3 F0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
 
-    // Direct Lighting
+    // ==========================================
+    // DIRECT LIGHTING
+    // ==========================================
     float3 Lo = float3(0.0, 0.0, 0.0);
 
     [loop]
@@ -275,11 +276,11 @@ float4 PSMain(PixelInput input) : SV_TARGET
         float3 L;
         float attenuation = 1.0;
 
-        if (light.Type == 0) // Directional
+        if (light.Type == 0)
         {
             L = normalize(-light.Direction);
         }
-        else // Point & Spot with physical windowing
+        else
         {
             float3 lightVec = light.Position - input.worldPos;
             float distance = length(lightVec);
@@ -289,7 +290,7 @@ float4 PSMain(PixelInput input) : SV_TARGET
             float windowing = clamp(1.0 - pow(dRange, 4.0), 0.0, 1.0);
             attenuation = (1.0 / (distance * distance + 1.0)) * (windowing * windowing);
 
-            if (light.Type == 2) // Spot
+            if (light.Type == 2)
             {
                 float theta = dot(L, normalize(-light.Direction));
                 float epsilon = light.InnerAngle - light.OuterAngle;
@@ -300,51 +301,54 @@ float4 PSMain(PixelInput input) : SV_TARGET
         }
 
         float3 radiance = light.Color * light.Intensity * attenuation;
-        
-        float2 screenPos = input.position.xy;
-        float shadow = CalculateShadow(input.worldPos, N, L, light, screenPos);
+        float shadow = CalculateShadow(input.worldPos, N, L, light, input.position.xy);
 
-        // Cook-Torrance
         float3 H = normalize(V + L);
-        float NdotL = max(dot(N, L), 0.0);
-        float NdotH = max(dot(N, H), 0.0);
-        float HdotV = max(dot(H, V), 0.0);
+        float NdotL = max(dot(N, L), 1e-4);
+        float NdotH = max(dot(N, H), 1e-4);
+        float HdotV = max(dot(H, V), 1e-4);
 
         float D = DistributionGGX(NdotH, roughness);
         float G = GeometrySmith(NdotV, NdotL, roughness);
         float3 F = FresnelSchlick(HdotV, F0);
 
         float3 specular = (D * G * F) / max(4.0 * NdotV * NdotL, 1e-4);
-        
-        float3 kS = F;
-        float3 kD = (1.0 - kS) * (1.0 - metallic);
+        float3 kD = (1.0 - F) * (1.0 - metallic);
 
         Lo += (kD * albedo * INV_PI + specular) * radiance * NdotL * shadow;
     }
 
-    // Ambient IBL Approx (Lazarov)
-    float3 F_ambient = FresnelSchlickRoughness(NdotV, F0, roughness);
-    float3 kS_amb = F_ambient;
-    float3 kD_amb = (1.0 - kS_amb) * (1.0 - metallic);
-    float3 diffuseAmbient = kD_amb * albedo * 0.05;
+    // ==========================================
+    // AMBIENT IBL
+    // ==========================================
+    float3 F_amb = FresnelSchlickRoughness(NdotV, F0, roughness);
+    float3 kD_amb = (1.0 - F_amb) * (1.0 - metallic);
 
-    float2 envBRDF;
-    {
-        const float4 c0 = float4(-1.0, -0.0275, -0.572, 0.022);
-        const float4 c1 = float4(1.0, 0.0425, 1.040, -0.040);
-        float4 r = roughness * c0 + c1;
-        float a004 = min(r.x * r.x, exp2(-9.28 * NdotV)) * r.x + r.y;
-        envBRDF = float2(-1.04, 1.04) * a004 + r.zw;
-    }
+    // Diffuse IBL
+    float3 irradiance = GlobalCubeTextures[NonUniformResourceIndex(IrradianceSRVIndex)].Sample(LinearClampSampler, N).rgb;
+    irradiance = min(irradiance, 1000.0);
+    float3 diffuseAmbient = kD_amb * irradiance * albedo;
+
+    // Specular IBL
+    float3 R = normalize(reflect(-V, N));
     
-    float3 envRadiance = float3(0.12, 0.14, 0.18);
-    float3 specularAmbient = envRadiance * (F_ambient * envBRDF.x + envBRDF.y);
-    float3 ambient = (diffuseAmbient + specularAmbient) * ao;
+    uint width, height, mipCount;
+    GlobalCubeTextures[NonUniformResourceIndex(PrefilteredSRVIndex)].GetDimensions(0, width, height, mipCount);
+    float maxMipLevel = (float)mipCount - 1.0;
+    
+    float lod = roughness * maxMipLevel;
+    float3 prefilteredColor = GlobalCubeTextures[NonUniformResourceIndex(PrefilteredSRVIndex)].SampleLevel(LinearClampSampler, R, lod).rgb;
+    prefilteredColor = min(prefilteredColor, 1000.0);
+    float2 brdf = GlobalTextures[NonUniformResourceIndex(BrdfLutSRVIndex)].Sample(LinearClampSampler, float2(NdotV, roughness)).rg;
+    float3 specularAmbient = prefilteredColor * (F_amb * brdf.x + brdf.y);
 
-    // Compose final color
+    float3 ambient = (diffuseAmbient + specularAmbient) * ao * IBLIntensity;
+
+    // ==========================================
+    // FINAL COMPOSE
+    // ==========================================
     float3 color = ambient + Lo + emissive;
 
-    color *= 1.0; // Exposure
     color = ACESFilmic(color);
     color = pow(max(color, 0.0), 1.0 / 2.2);
 

@@ -30,13 +30,18 @@ bool RootSignature::Init(ID3D12Device* device, DescriptorManager* descriptorMana
 	params[Slot_LightSRV].InitAsShaderResourceView(2, 2);
 
 	// Descriptor Tables (Bindless - space0)
-	static CD3DX12_DESCRIPTOR_RANGE1 rangeCBV, rangeSRV, rangeUAV;
+	static CD3DX12_DESCRIPTOR_RANGE1 rangeCBV, rangeSRV[2], rangeUAV;
 	rangeCBV.Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, UINT_MAX, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
-	rangeSRV.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	
+	// Range 0: Cho Texture2D (space0)
+	rangeSRV[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
+	// Range 1: Cho TextureCube (space3) - Ép offset về 0 để dùng chung Index với space0
+	rangeSRV[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, UINT_MAX, 0, 3, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE, 0);
+
 	rangeUAV.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UINT_MAX, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 
 	params[Slot_CBVTable].InitAsDescriptorTable(1, &rangeCBV);
-	params[Slot_SRVTable].InitAsDescriptorTable(1, &rangeSRV);
+	params[Slot_SRVTable].InitAsDescriptorTable(2, rangeSRV);
 	params[Slot_UAVTable].InitAsDescriptorTable(1, &rangeUAV);
 
 	// 3. Static Samplers

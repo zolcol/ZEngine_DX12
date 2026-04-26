@@ -1,5 +1,8 @@
 #pragma once
 
+class CommandContext;
+struct ImageData;
+
 class Texture
 {
 public:
@@ -16,6 +19,10 @@ protected:
 	
 	uint32_t m_SRVIndex;
 	bool m_InitSRV = true;
+	uint32_t m_MipLevels = 1;
 
 	D3D12_RESOURCE_STATES m_CurrentState = D3D12_RESOURCE_STATE_COMMON;
+
+	// Shared logic for creating GPU resource and uploading DDS data
+	bool CreateResourceAndUpload(ID3D12Device* device, CommandContext* commandContext, const ImageData& imageData);
 };

@@ -3,6 +3,7 @@
 #include "Renderer/Device.h"
 #include "Scene.h"
 #include "CoreComponent.h"
+#include "RenderComponent.h"
 #include "UIHelper.h"
 #include "Input.h"
 
@@ -72,6 +73,7 @@ void Editor::Update(Scene* scene, float dt)
 
 	DrawSceneHierarchy(scene);
 	DrawInspector(scene);
+	DrawEnvironmentSettings(scene);
 	DrawGizmo(scene);
 }
 
@@ -220,4 +222,43 @@ void Editor::Render(ID3D12GraphicsCommandList* cmdList)
 	ID3D12DescriptorHeap* imguiHeaps[] = { m_ImGuiHeap.Get() };
 	cmdList->SetDescriptorHeaps(_countof(imguiHeaps), imguiHeaps);
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), cmdList);
+}
+
+void Editor::DrawEnvironmentSettings(Scene* scene)
+{
+	ImGui::Begin("Environment Settings");
+
+	auto& registry = scene->GetRegistry();
+
+	// Sử dụng [id, type] vì entt::resolve() trả về một pair
+	for (auto [id, type] : entt::resolve())
+	{
+		auto inspectFunc = type.func("Inspect"_hs);
+		if (!inspectFunc) continue;
+
+		for (const auto& idType : scene->GetGlobalComponentIdTypes())
+		{
+			if (id == idType)
+			{
+				auto* env = registry.ctx().find<EnvironmentComponent>();
+				if (env)
+				{
+					std::string componentName = "Environment Component";
+					if (EditorComponentInfo* info = type.custom())
+					{
+						componentName = info->name;
+					}
+
+					if (ImGui::CollapsingHeader(componentName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						auto instance = type.from_void(env);
+						inspectFunc.invoke(instance);
+					}
+				}
+			}
+
+		}
+	}
+
+	ImGui::End();
 }

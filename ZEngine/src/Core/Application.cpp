@@ -9,6 +9,7 @@
 #include "CoreComponent.h"
 #include "RegisterEnttMeta.h"
 #include "Input.h"
+#include "Renderer/Device.h"
 
 Application::Application() = default;
 
@@ -44,6 +45,7 @@ void Application::Init()
 	// Scene
 	m_Scene = std::make_unique<Scene>(m_Renderer.get());
 	m_Scene->InitModel();
+	m_Scene->InitEnvironment(m_Renderer->GetDevice()->GetDevice(), m_Renderer->GetCommandContext(), m_Renderer->GetDescriptorManager());
 
 	// Time
 	Time::Init();

@@ -182,6 +182,7 @@ dxgi.lib
     <ClCompile Include="src\Renderer\Swapchain.cpp" />
     <ClCompile Include="src\Renderer\Texture.cpp" />
     <ClCompile Include="src\Renderer\Texture2D.cpp" />
+    <ClCompile Include="src\Renderer\TextureCube.cpp" />
     <ClCompile Include="src\Renderer\TextureDepth.cpp" />
     <ClCompile Include="src\Renderer\TextureRenderTarget.cpp" />
   </ItemGroup>
@@ -222,6 +223,7 @@ dxgi.lib
     <ClInclude Include="src\Renderer\Swapchain.h" />
     <ClInclude Include="src\Renderer\Texture.h" />
     <ClInclude Include="src\Renderer\Texture2D.h" />
+    <ClInclude Include="src\Renderer\TextureCube.h" />
     <ClInclude Include="src\Renderer\TextureDepth.h" />
     <ClInclude Include="src\Renderer\TextureRenderTarget.h" />
   </ItemGroup>

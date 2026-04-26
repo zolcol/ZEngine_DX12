@@ -2,6 +2,7 @@
 #include <entt/meta/factory.hpp>
 #include <entt/meta/resolve.hpp>
 #include "CoreComponent.h"
+#include "RenderComponent.h"
 #include "Editor.h"
 
 using namespace entt::literals;
@@ -22,4 +23,8 @@ void RegisterMetaData()
 	entt::meta_factory<LightComponent>{}
 	.custom<EditorComponentInfo>("Light Component")
 		.func<&LightComponent::Inspect>("Inspect"_hs);
-	}
+
+	entt::meta_factory<EnvironmentComponent>{}
+	.custom<EditorComponentInfo>("Environment Component")
+		.func<&EnvironmentComponent::Inspect>("Inspect"_hs);
+}

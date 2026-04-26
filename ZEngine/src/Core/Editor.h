@@ -25,6 +25,7 @@ public:
 private:
 	void DrawSceneHierarchy(Scene* scene);
 	void DrawInspector(Scene* scene);
+	void DrawEnvironmentSettings(Scene* scene);
 	void DrawGizmo(Scene* scene);
 
 	ComPtr<ID3D12DescriptorHeap> m_ImGuiHeap;

@@ -209,7 +209,7 @@ struct LightComponent
 			// Reverse: m33 = -1/(f-n), m43 = f/(f-n)
 			float nearP = 0.1f;
 			float farP = 100.0f;
-			proj = XMMatrixOrthographicLH(10.0f, 10.0f, nearP, farP);
+			proj = XMMatrixOrthographicLH(5.0f, 5.0f, nearP, farP);
 			proj.r[2].m128_f32[2] = -1.0f / (farP - nearP);
 			proj.r[3].m128_f32[2] = farP / (farP - nearP);
 		}

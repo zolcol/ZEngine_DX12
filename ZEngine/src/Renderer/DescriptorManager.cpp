@@ -192,9 +192,18 @@ void DescriptorManager::InitStaticSamplers()
 	shadowSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
 	shadowSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
 
+	// s3: Linear Clamp - Dành cho Cubemap IBL
+	CD3DX12_STATIC_SAMPLER_DESC linearClamp(
+		3, D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP
+	);
+
 	m_StaticSamplers.push_back(linearWrap);
 	m_StaticSamplers.push_back(pointClamp);
 	m_StaticSamplers.push_back(shadowSampler);
+	m_StaticSamplers.push_back(linearClamp);
 }
 
 void DescriptorManager::BindDescriptorHeaps(ID3D12GraphicsCommandList* cmdList)

@@ -37,6 +37,8 @@ public:
 
 	// --- Getters & System Connect ---
 	Device*       GetDevice()       const { return m_Device.get(); }
+	CommandContext* GetCommandContext() const { return m_CommandContext.get(); }
+	DescriptorManager* GetDescriptorManager() const { return m_DescriptorManager.get(); }
 	ModelManager* GetModelManager() const { return m_ModelManager.get(); }
 	void ConnectToScene(entt::registry& registry);
 

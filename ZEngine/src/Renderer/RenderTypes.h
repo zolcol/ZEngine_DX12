@@ -38,7 +38,12 @@ struct alignas(16) ConstantBufferData
 	XMFLOAT4X4 ViewMatrix;
 	XMFLOAT4X4 ProjectionMatrix;
 	XMFLOAT3   CameraPos;
-	float padding;
+	uint32_t   SkyboxSRVIndex;
+
+	uint32_t   IrradianceSRVIndex;
+	uint32_t   PrefilteredSRVIndex;
+	uint32_t   BrdfLutSRVIndex;
+	float      IBLIntensity;
 };
 
 struct alignas(16) ShadowConstantBufferData
@@ -48,8 +53,6 @@ struct alignas(16) ShadowConstantBufferData
 	XMFLOAT3   PaddingPos;
 	float padding;
 };
-
-
 
 struct ObjectData
 {
