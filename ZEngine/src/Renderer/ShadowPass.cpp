@@ -101,9 +101,11 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 		{
 			if (camera.IsPrimary)
 			{
-				XMMATRIX view = camera.GetViewMatrix(transform);
-				XMMATRIX proj = camera.GetProjectionMatrix((float)m_FrameWidth / m_FrameHeight);
-				cameraViewProj = view * proj;
+				XMMATRIX cameraView = XMMatrixIdentity();
+				XMMATRIX cameraProj = XMMatrixIdentity();
+				cameraView = camera.GetViewMatrix(transform);
+				cameraProj = camera.GetProjectionMatrix((float)m_FrameWidth / m_FrameHeight);
+				cameraViewProj = cameraView * cameraProj;
 			}
 		}
 	);
@@ -118,24 +120,10 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 			DirectX::XMMATRIX projF = XMMatrixIdentity();
 			
 			DirectX::XMFLOAT3 lightDir = GetDirectionFromRotation(transform.Rotation);
-			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 200);
-			
+			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 0.1f, 3, 0.1f, 1000, SHADOW_RESOLUTION);
+
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightViewMatrix, DirectX::XMMatrixTranspose(viewF));
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightProjectionMatrix, DirectX::XMMatrixTranspose(projF));
-			
-
-			DirectX::XMFLOAT4X4 viewF2 = light.GetViewMatrix(transform);
-			DirectX::XMFLOAT4X4 projF2 = light.GetProjectionMatrix();
-			
-			// --- PRINT LOGS ---
-			DirectX::XMFLOAT4X4 m_viewF, m_projF;
-			DirectX::XMStoreFloat4x4(&m_viewF, viewF);
-			DirectX::XMStoreFloat4x4(&m_projF, projF);
-
-			LogMatrix("viewF (CalculateDirectional)", m_viewF);
-			LogMatrix("projF (CalculateDirectional)", m_projF);
-			LogMatrix("viewF2 (LightComponent)", viewF2);
-			LogMatrix("projF2 (LightComponent)", projF2);
 
 			m_ShadowConstantBuffers[currentFrame]->UploadData(
 				device,	commandContext,

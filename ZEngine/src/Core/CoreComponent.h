@@ -269,7 +269,7 @@ struct GPULightData
 	
 	int		 ShadowMapIndex;
 	float	 padding;
-	XMFLOAT4X4	lightViewProj;
+	XMFLOAT4X4 lightViewProj;
 
 	GPULightData() = default;
 

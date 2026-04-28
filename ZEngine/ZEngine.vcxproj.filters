@@ -87,6 +87,7 @@
     <ClCompile Include="src\Renderer\ShadowPass.cpp" />
     <ClCompile Include="src\Core\MipmapManager.cpp" />
     <ClCompile Include="src\Renderer\TextureCube.cpp" />
+    <ClCompile Include="src\Renderer\DX12Utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Core\Application.h">

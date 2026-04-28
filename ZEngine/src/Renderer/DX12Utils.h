@@ -1,7 +1,8 @@
 #include <system_error>
-
 #include <DirectXMath.h>
 #include <algorithm>
+#include <d3d12.h>
+#include <iostream>
 using namespace DirectX;
 
 #define CHECK(x) \
@@ -51,99 +52,7 @@ inline std::string HRToString(const HRESULT& hr)
     return std::system_category().message(hr);
 }
 
-
-// Calculate view and projection matrices for directional light frustum fitting
-inline void CalculateDirectionalLightMatrices(
-	XMMATRIX& outLightView,
-	XMMATRIX& outLightProj,
-	const XMMATRIX& cameraViewProj,
-	const XMFLOAT3& lightDirection,
-	float shadowDistanceOffset = 200.0f)
-{
-	// 1. Get inverse camera view-projection matrix
-	XMVECTOR det;
-	XMMATRIX invViewProj = XMMatrixInverse(&det, cameraViewProj);
-
-	//// 2. Frustum corners in NDC space (DirectX: Z from 0 to 1)
-	//XMFLOAT4 frustumCornersNDC[8] = {
-	//{ -1, -1, 1, 1 }, { 1, -1, 1, 1 },
-	//{ -1,  1, 1, 1 }, { 1,  1, 1, 1 },
-	//{ -1, -1, 0, 1 }, { 1, -1, 0, 1 },
-	//{ -1,  1, 0, 1 }, { 1,  1, 0, 1 }
-	//};
-
-	float zNear = 1.0f;
-	float zFar = 0.03f; // 👈 CHỈNH DÒNG NÀY
-
-	XMFLOAT4 frustumCornersNDC[8] = {
-		{ -1, -1, zNear, 1 }, { 1, -1, zNear, 1 },
-		{ -1,  1, zNear, 1 }, { 1,  1, zNear, 1 },
-
-		{ -1, -1, zFar, 1 }, { 1, -1, zFar, 1 },
-		{ -1,  1, zFar, 1 }, { 1,  1, zFar, 1 }
-	};
-
-	// 3. Transform to world space and calculate center
-	XMVECTOR frustumCornersWorld[8];
-	XMVECTOR frustumCenter = XMVectorZero();
-
-	for (int i = 0; i < 8; ++i)
-	{
-		XMVECTOR corner = XMLoadFloat4(&frustumCornersNDC[i]);
-		corner = XMVector4Transform(corner, invViewProj);
-
-		// Perspective divide
-		corner = XMVectorScale(corner, 1.0f / XMVectorGetW(corner));
-
-		frustumCornersWorld[i] = corner;
-		frustumCenter = XMVectorAdd(frustumCenter, corner);
-	}
-
-	// Average to get the center
-	frustumCenter = XMVectorScale(frustumCenter, 1.0f / 8.0f);
-
-	// 4. Calculate Light View Matrix
-	XMVECTOR lightDir = XMLoadFloat3(&lightDirection);
-	lightDir = XMVector3Normalize(lightDir);
-
-	// Position light backwards from center to catch shadow casters outside view
-	XMVECTOR lightPos = XMVectorSubtract(frustumCenter, XMVectorScale(lightDir, shadowDistanceOffset));
-
-	// Default up vector
-	XMVECTOR upDir = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-	// Edge case: If light direction is perfectly vertical, adjust the up vector
-	if (fabs(XMVectorGetY(lightDir)) > 0.999f)
-	{
-		upDir = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-	}
-
-	outLightView = XMMatrixLookAtLH(lightPos, frustumCenter, upDir);
-
-	// 5. Transform world corners to light view space and find bounding box
-	float minX = FLT_MAX, maxX = -FLT_MAX;
-	float minY = FLT_MAX, maxY = -FLT_MAX;
-	float minZ = FLT_MAX, maxZ = -FLT_MAX;
-
-	for (int i = 0; i < 8; ++i)
-	{
-		XMVECTOR cornerLightSpace = XMVector4Transform(frustumCornersWorld[i], outLightView);
-		XMFLOAT4 pt;
-		XMStoreFloat4(&pt, cornerLightSpace);
-
-		// Using extra parentheses to prevent macro conflicts with <windows.h> min/max
-		minX = (std::min)(minX, pt.x);
-		maxX = (std::max)(maxX, pt.x);
-		minY = (std::min)(minY, pt.y);
-		maxY = (std::max)(maxY, pt.y);
-		minZ = (std::min)(minZ, pt.z);
-		maxZ = (std::max)(maxZ, pt.z);
-	}
-
-	// 6. Calculate Light Projection Matrix
-	// minZ and maxZ are used as Near and Far planes
-	outLightProj = XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, maxZ, minZ);
-}
+void CalculateDirectionalLightMatrices(XMMATRIX& outLightView, XMMATRIX& outLightProj, const XMMATRIX& cameraViewProj, const XMFLOAT3& lightDirection, float splitNear, float splitFar, float camNear, float camFar, float shadowMapResolution, float shadowDistanceOffset = 200);
 
 // Calculate forward direction from a quaternion rotation
 inline DirectX::XMFLOAT3 GetDirectionFromRotation(const DirectX::XMFLOAT4& rotation)
