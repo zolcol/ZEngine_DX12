@@ -64,12 +64,23 @@ inline void CalculateDirectionalLightMatrices(
 	XMVECTOR det;
 	XMMATRIX invViewProj = XMMatrixInverse(&det, cameraViewProj);
 
-	// 2. Frustum corners in NDC space (DirectX: Z from 0 to 1)
+	//// 2. Frustum corners in NDC space (DirectX: Z from 0 to 1)
+	//XMFLOAT4 frustumCornersNDC[8] = {
+	//{ -1, -1, 1, 1 }, { 1, -1, 1, 1 },
+	//{ -1,  1, 1, 1 }, { 1,  1, 1, 1 },
+	//{ -1, -1, 0, 1 }, { 1, -1, 0, 1 },
+	//{ -1,  1, 0, 1 }, { 1,  1, 0, 1 }
+	//};
+
+	float zNear = 1.0f;
+	float zFar = 0.03f; // 👈 CHỈNH DÒNG NÀY
+
 	XMFLOAT4 frustumCornersNDC[8] = {
-		{ -1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, -1.0f, 0.0f, 1.0f },
-		{ -1.0f,  1.0f, 0.0f, 1.0f }, { 1.0f,  1.0f, 0.0f, 1.0f },
-		{ -1.0f, -1.0f, 1.0f, 1.0f }, { 1.0f, -1.0f, 1.0f, 1.0f },
-		{ -1.0f,  1.0f, 1.0f, 1.0f }, { 1.0f,  1.0f, 1.0f, 1.0f }
+		{ -1, -1, zNear, 1 }, { 1, -1, zNear, 1 },
+		{ -1,  1, zNear, 1 }, { 1,  1, zNear, 1 },
+
+		{ -1, -1, zFar, 1 }, { 1, -1, zFar, 1 },
+		{ -1,  1, zFar, 1 }, { 1,  1, zFar, 1 }
 	};
 
 	// 3. Transform to world space and calculate center
@@ -131,7 +142,7 @@ inline void CalculateDirectionalLightMatrices(
 
 	// 6. Calculate Light Projection Matrix
 	// minZ and maxZ are used as Near and Far planes
-	outLightProj = XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);
+	outLightProj = XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, maxZ, minZ);
 }
 
 // Calculate forward direction from a quaternion rotation

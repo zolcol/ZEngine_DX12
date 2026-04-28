@@ -12,6 +12,15 @@
 #include <Core/RenderComponent.h>
 #include <Core/CoreComponent.h>
 
+static void LogMatrix(const char* name, const DirectX::XMFLOAT4X4& m)
+{
+	ENGINE_FATAL("--- Matrix: {} ---", name);
+	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._11, m._12, m._13, m._14);
+	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._21, m._22, m._23, m._24);
+	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._31, m._32, m._33, m._34);
+	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._41, m._42, m._43, m._44);
+}
+
 uint32_t ShadowPass::GetShadowSRVs(uint32_t currentFrame) const
 {
 	return m_ShadowMaps[currentFrame]->GetSRVIndex();
@@ -114,6 +123,20 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightViewMatrix, DirectX::XMMatrixTranspose(viewF));
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightProjectionMatrix, DirectX::XMMatrixTranspose(projF));
 			
+
+			DirectX::XMFLOAT4X4 viewF2 = light.GetViewMatrix(transform);
+			DirectX::XMFLOAT4X4 projF2 = light.GetProjectionMatrix();
+			
+			// --- PRINT LOGS ---
+			DirectX::XMFLOAT4X4 m_viewF, m_projF;
+			DirectX::XMStoreFloat4x4(&m_viewF, viewF);
+			DirectX::XMStoreFloat4x4(&m_projF, projF);
+
+			LogMatrix("viewF (CalculateDirectional)", m_viewF);
+			LogMatrix("projF (CalculateDirectional)", m_projF);
+			LogMatrix("viewF2 (LightComponent)", viewF2);
+			LogMatrix("projF2 (LightComponent)", projF2);
+
 			m_ShadowConstantBuffers[currentFrame]->UploadData(
 				device,	commandContext,
 				&m_ShadowConstantBufferDatas[currentFrame],
