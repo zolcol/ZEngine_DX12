@@ -124,11 +124,17 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     float3 biasPos = worldPos + N * (1.0 - NoL) * 0.05;
 
     float4 shadowPos = mul(float4(biasPos, 1.0), light.LightViewProj);
+
+    // 1. Chặn Back-Projection (Dành cho Spotlight có w âm)
+    if (shadowPos.w <= 0.0)
+        return 1.0;
+
     float3 projCoords = shadowPos.xyz / shadowPos.w;
     projCoords.xy = projCoords.xy * 0.5 + 0.5;
     projCoords.y = 1.0 - projCoords.y;
 
-    if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
+    // 2. Cập nhật thêm điều kiện z < 0.0 vào ranh giới
+    if (projCoords.z > 1.0 || projCoords.z < 0.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
         return 1.0;
 
     float currentDepth = projCoords.z;

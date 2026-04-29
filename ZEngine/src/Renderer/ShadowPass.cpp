@@ -111,7 +111,7 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 			DirectX::XMMATRIX projF = XMMatrixIdentity();
 			
 			DirectX::XMFLOAT3 lightDir = GetDirectionFromRotation(transform.Rotation);
-			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 0.1f, 10, 0.1f, 1000, SHADOW_RESOLUTION, 100);
+			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 0.1f, 3, 0.1f, 1000, SHADOW_RESOLUTION, 100);
 
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightViewMatrix, DirectX::XMMatrixTranspose(viewF));
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightProjectionMatrix, DirectX::XMMatrixTranspose(projF));
