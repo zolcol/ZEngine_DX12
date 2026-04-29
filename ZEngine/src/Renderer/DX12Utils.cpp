@@ -1,5 +1,6 @@
 #pragma once
 #include "DX12Utils.h"
+#include <Core/Log.h>
 
 void CalculateDirectionalLightMatrices(
 	XMMATRIX& outLightView,
@@ -87,9 +88,10 @@ void CalculateDirectionalLightMatrices(
 	maxX = (std::floor)(maxX / worldUnitsPerTexel) * worldUnitsPerTexel;
 	minY = (std::floor)(minY / worldUnitsPerTexel) * worldUnitsPerTexel;
 	maxY = (std::floor)(maxY / worldUnitsPerTexel) * worldUnitsPerTexel;
-
+	/*ENGINE_FATAL("sphereRadius = {}", sphereRadius);
+	ENGINE_FATAL("worldUnitsPerTexel = {}", worldUnitsPerTexel);*/
 	// 6. Ortho projection (Reversed-Z)
-	minZ = 0.01f;
+	minZ = 0.1f;
 	// Lưu ý: minZ/maxZ cũng nên được mở rộng một chút để an toàn
 	outLightProj = XMMatrixOrthographicOffCenterLH(
 		minX, maxX,

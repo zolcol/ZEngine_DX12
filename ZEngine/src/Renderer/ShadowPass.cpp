@@ -12,15 +12,6 @@
 #include <Core/RenderComponent.h>
 #include <Core/CoreComponent.h>
 
-static void LogMatrix(const char* name, const DirectX::XMFLOAT4X4& m)
-{
-	ENGINE_FATAL("--- Matrix: {} ---", name);
-	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._11, m._12, m._13, m._14);
-	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._21, m._22, m._23, m._24);
-	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._31, m._32, m._33, m._34);
-	ENGINE_FATAL("[{:10.4f} {:10.4f} {:10.4f} {:10.4f}]", m._41, m._42, m._43, m._44);
-}
-
 uint32_t ShadowPass::GetShadowSRVs(uint32_t currentFrame) const
 {
 	return m_ShadowMaps[currentFrame]->GetSRVIndex();
@@ -83,7 +74,7 @@ void ShadowPass::InitPSO(ID3D12Device* device, RootSignature* rootSignature)
 	PipelineConfig config{};
 	config.vs = m_VS.get();
 	config.numRenderTargets = 0;
-	config.depthBias = 1000;
+	config.depthBias = 1;
 	config.cullMode = D3D12_CULL_MODE_FRONT;
 	config.slopeScaledDepthBias = 1.5f;
 
@@ -120,7 +111,7 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 			DirectX::XMMATRIX projF = XMMatrixIdentity();
 			
 			DirectX::XMFLOAT3 lightDir = GetDirectionFromRotation(transform.Rotation);
-			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 0.1f, 3, 0.1f, 1000, SHADOW_RESOLUTION);
+			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 0.1f, 10, 0.1f, 1000, SHADOW_RESOLUTION, 100);
 
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightViewMatrix, DirectX::XMMatrixTranspose(viewF));
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightProjectionMatrix, DirectX::XMMatrixTranspose(projF));
@@ -140,15 +131,12 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 
 void ShadowPass::BeginRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t currentFrame, ModelManager* modelManager, Scene* scene)
 {
-	// Update Constant Buffer
-	UpdateConstantBuffer(m_Device, m_CommandContext, scene, currentFrame);
-
 	if (!m_FoundShadowLight[currentFrame])
 		return;
 
 	m_ShadowMaps[currentFrame]->Transition(cmdList, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-	// 👉 Thiết lập Viewport và Scissor đúng kích thước Shadow Map (2048x2048)
+	// 👉 Thiết lập Viewport và Scissor đúng kích thước Shadow Map 
 	CD3DX12_VIEWPORT viewport(0.0f, 0.0f, (float)SHADOW_RESOLUTION, (float)SHADOW_RESOLUTION);
 	CD3DX12_RECT scissorRect(0, 0, SHADOW_RESOLUTION, SHADOW_RESOLUTION);
 	cmdList->RSSetViewports(1, &viewport);

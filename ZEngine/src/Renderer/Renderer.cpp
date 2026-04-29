@@ -134,6 +134,8 @@ void Renderer::BeginFrame(Scene* scene)
 	// 2. Data Updates (CPU -> GPU)
 	UpdateConstantBuffersData(m_CurrentFrame, scene);
 	UpdateObjectDatas(m_CurrentFrame, scene);
+	
+	m_ShadowPass->UpdateConstantBuffer(m_Device->GetDevice(), m_CommandContext.get(), scene, m_CurrentFrame);
 	UpdateLightBuffers(m_CurrentFrame, scene);
 
 	// 3. Global Bindings
@@ -337,7 +339,8 @@ void Renderer::UpdateLightBuffers(int currentFrame, Scene* scene)
 	{
 		int shadowIdx = (!shadowCastFound && light.CastShadow) ? m_ShadowPass->GetShadowSRVs(currentFrame) : -1;
 		m_GpuLightDatas[currentFrame][m_FrameLightCount] = GPULightData(light, transform, shadowIdx);
-		
+		m_GpuLightDatas[currentFrame][m_FrameLightCount].lightViewProj = m_ShadowPass->GetLightViewProj(currentFrame);
+
 		m_FrameLightCount++;
 		if (light.CastShadow) shadowCastFound = true;
 	});

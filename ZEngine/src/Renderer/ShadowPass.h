@@ -26,7 +26,25 @@ public:
 	void EndRenderPass(ID3D12GraphicsCommandList* cmdList, uint32_t currentFrame);
 
 	void InitConstantBuffer(ID3D12Device* device, DescriptorManager* descriptorManager, uint32_t frameCount);
+	void UpdateConstantBuffer(ID3D12Device* device, CommandContext* commandContext, Scene* scene, uint32_t currentFrame);
 
+	DirectX::XMFLOAT4X4 GetLightViewProj(int currentFrame)
+	{
+		using namespace DirectX;
+
+		const auto& cb = m_ShadowConstantBufferDatas[currentFrame];
+
+		XMMATRIX view = XMLoadFloat4x4(&cb.LightViewMatrix);   // viewᵀ
+		XMMATRIX proj = XMLoadFloat4x4(&cb.LightProjectionMatrix); // projᵀ
+
+		// vì đã transpose trước đó:
+		XMMATRIX viewProj = XMMatrixMultiply(proj, view);
+
+		XMFLOAT4X4 result;
+		XMStoreFloat4x4(&result, viewProj);
+
+		return result;
+	}
 private:
 	const int SHADOW_RESOLUTION = 4096;
 	uint32_t m_FrameWidth;
@@ -47,6 +65,4 @@ private:
 
 	void InitShadowMapsTexture(ID3D12Device* device, CommandContext* commandContext, DescriptorManager* descriptorManager, uint32_t frameCount);
 	void InitPSO(ID3D12Device* device, RootSignature* rootSignature);
-
-	void UpdateConstantBuffer(ID3D12Device* device, CommandContext* commandContext, Scene* scene, uint32_t currentFrame);
 };
