@@ -37,7 +37,7 @@ void Scene::InitModel()
 	Entity light1 = CreateEntity("Light 1");
 	light1.AddComponent<LightComponent>();
 	light1.GetComponent<LightComponent>().CastShadow = true;
-	light1.GetComponent<LightComponent>().Intensity = 1;
+	light1.GetComponent<LightComponent>().Intensity = 5;
 	light1.GetComponent<TransformComponent>().Position = { -2.0f, 4.0f, -2.0f };
 	light1.GetComponent<TransformComponent>().SetEulerAnglesDegrees({ 45.0f, 45.0f, 0.0f });
 	
@@ -94,6 +94,15 @@ void Scene::InitModel()
 		m_Sofa.AddComponent<RenderIndexComponent>();
 	}*/
 
+	Entity m_Plane = CreateEntity("Plane");
+	Model* planeModel = m_ModelManager->InitModel("Resources/Models/Plane/scene.gltf", { 3, 3, 3 },  { 90, 0,0 });
+	if (planeModel)
+	{
+		m_Plane.AddComponent<MeshComponent>(planeModel);
+		m_Plane.AddComponent<RenderIndexComponent>();
+	}
+
+
 	m_ModelManager->UploadMaterialBuffer();
 }
 
@@ -115,6 +124,7 @@ void Scene::InitEnvironment(ID3D12Device* device, CommandContext* commandContext
 	envComponent.SkyboxSRVIndex =		m_SkyboxTexture->GetSRVIndex();
 	envComponent.IrradianceSRVIndex =	m_IrradianceTexture->GetSRVIndex();
 	envComponent.PrefilteredSRVIndex =	m_PrefilteredTexture->GetSRVIndex();
+	envComponent.IBLIntensity = 0;
 
 	m_GlobalComponentIdTypes.push_back(entt::type_id<EnvironmentComponent>().hash());
 }
@@ -125,6 +135,7 @@ void Scene::Update(float dt)
 		{
 			if (!m_Registry.any_of<CameraComponent>(entity) && !m_Registry.any_of<LightComponent>(entity))
 			{
+				if (!(m_Registry.get<TagComponent>(entity).name == "Plane"))
 				transform.Rotate({ 0.0f, 1.0f, 0.0f }, dt * 20.0f);
 			}
 		});
