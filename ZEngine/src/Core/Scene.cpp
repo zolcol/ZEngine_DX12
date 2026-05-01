@@ -137,7 +137,7 @@ void Scene::Update(float dt)
 			{
 				if (!(m_Registry.get<TagComponent>(entity).name == "Plane"))
 				{
-					transform.Rotate({ 0.0f, 1.0f, 0.0f }, dt * 20.0f);
+					//transform.Rotate({ 0.0f, 1.0f, 0.0f }, dt * 20.0f);
 
 				}
 			}

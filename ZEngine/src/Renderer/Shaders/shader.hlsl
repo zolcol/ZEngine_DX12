@@ -131,14 +131,14 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     projCoords.y = 1.0 - projCoords.y;
 
     // 2. Cập nhật thêm điều kiện z < 0.0 vào ranh giới
-    if (projCoords.z > 1.0 || projCoords.z < 0.0 || 
-        projCoords.x < 0.0 || projCoords.x > 1.0 || 
+    if (projCoords.z > 1.0 || projCoords.z < 0.0 ||
+        projCoords.x < 0.0 || projCoords.x > 1.0 ||
         projCoords.y < 0.0 || projCoords.y > 1.0)
         return 1.0;
 
     float currentDepth = projCoords.z;
     
-    float spread = 1.5;
+    float spread = 2;
     float2 spreadVec = spread * texelSize;
 
     float shadow = 0.0;
@@ -152,7 +152,7 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     }
     shadow /= 16.0;
 
-    return lerp(0, 1.0, shadow);
+    return lerp(0.2, 1.0, shadow);
 }
 
 // ==========================================

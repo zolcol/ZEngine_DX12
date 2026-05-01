@@ -1,6 +1,7 @@
 #pragma once
 #include "DX12Utils.h"
 #include <Core/Log.h>
+#include <cmath> 
 
 void CalculateDirectionalLightMatrices(
 	XMMATRIX& outLightView,
@@ -13,7 +14,7 @@ void CalculateDirectionalLightMatrices(
 	float camNear,
 	float camFar,
 
-	float shadowMapResolution, 
+	float shadowMapResolution,
 	float shadowDistanceOffset)
 {
 
@@ -73,13 +74,20 @@ void CalculateDirectionalLightMatrices(
 	}
 
 	// --- TEXEL SNAPPING CHO TIGHT AABB ---
-	float worldUnitsPerTexelX = (maxX - minX) / shadowMapResolution;
-	float worldUnitsPerTexelY = (maxY - minY) / shadowMapResolution;
+	// Tính kích thước thật của vùng nhìn
+	float width = maxX - minX;
+	float height = maxY - minY;
 
-	minX = floor(minX / worldUnitsPerTexelX) * worldUnitsPerTexelX;
-	maxX = ceil(maxX / worldUnitsPerTexelX) * worldUnitsPerTexelX;
-	minY = floor(minY / worldUnitsPerTexelY) * worldUnitsPerTexelY;
-	maxY = ceil(maxY / worldUnitsPerTexelY) * worldUnitsPerTexelY;
+	float worldUnitsPerTexelX = width / shadowMapResolution;
+	float worldUnitsPerTexelY = height / shadowMapResolution;
+
+	// Snap điểm bắt đầu (min), sau đó cộng lại kích thước gốc để lấy điểm kết thúc (max)
+	// Đảm bảo width/height không bị scale liên tục khi di chuyển camera
+	minX = std::floor(minX / worldUnitsPerTexelX) * worldUnitsPerTexelX;
+	maxX = minX + width;
+
+	minY = std::floor(minY / worldUnitsPerTexelY) * worldUnitsPerTexelY;
+	maxY = minY + height;
 
 	// 6. Tạo ma trận Ortho (Reversed-Z: maxZ -> Near(1), minZ -> Far(0))
 	outLightProj = XMMatrixOrthographicOffCenterLH(

@@ -44,16 +44,17 @@ public:
 
 		XMFLOAT4X4 result;
 		XMStoreFloat4x4(&result, viewProj);
-
+		
 		return result;
 	}
 
 public:
-	int m_DepthBias = -5000;
-	float m_SlopeScaledDepthBias = -3.0f;
-
+	int m_DepthBias = -300;
+	float m_SlopeScaledDepthBias = -5.0f;
+	
 private:
 	const int SHADOW_RESOLUTION = 2048;
+	//const int SHADOW_RESOLUTION = 4096;
 	uint32_t m_FrameWidth;
 	uint32_t m_FrameHeight;
 	RootSignature* m_RootSignature = nullptr;
