@@ -40,6 +40,7 @@ public:
 	CommandContext* GetCommandContext() const { return m_CommandContext.get(); }
 	DescriptorManager* GetDescriptorManager() const { return m_DescriptorManager.get(); }
 	ModelManager* GetModelManager() const { return m_ModelManager.get(); }
+	ShadowPass* GetShadowPass() const { return m_ShadowPass.get(); }
 	void ConnectToScene(entt::registry& registry);
 
 private:

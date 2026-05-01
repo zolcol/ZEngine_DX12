@@ -3,6 +3,7 @@
 
 class Device;
 class Scene;
+class Renderer;
 
 struct EditorComponentInfo
 {
@@ -20,12 +21,13 @@ public:
 	void Shutdown();
 
 	void BeginFrame();
-	void Update(Scene* scene, float dt);
+	void Update(Scene* scene, Renderer* renderer, float dt);
 	void Render(ID3D12GraphicsCommandList* cmdList);
 private:
 	void DrawSceneHierarchy(Scene* scene);
 	void DrawInspector(Scene* scene);
 	void DrawEnvironmentSettings(Scene* scene);
+	void DrawShadowSettings(Renderer* renderer);
 	void DrawGizmo(Scene* scene);
 
 	ComPtr<ID3D12DescriptorHeap> m_ImGuiHeap;

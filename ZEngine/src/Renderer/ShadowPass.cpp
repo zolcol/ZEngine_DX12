@@ -61,7 +61,7 @@ void ShadowPass::InitShadowMapsTexture(ID3D12Device* device, CommandContext* com
 		m_ShadowMaps[i]->Init(
 			device, commandContext, descriptorManager,
 			SHADOW_RESOLUTION, SHADOW_RESOLUTION,
-			true
+			true, DXGI_FORMAT_D32_FLOAT, 0.0f
 		);
 	}
 }
@@ -74,12 +74,18 @@ void ShadowPass::InitPSO(ID3D12Device* device, RootSignature* rootSignature)
 	PipelineConfig config{};
 	config.vs = m_VS.get();
 	config.numRenderTargets = 0;
-	config.depthBias = 1;
-	config.cullMode = D3D12_CULL_MODE_FRONT;
-	config.slopeScaledDepthBias = 1.5f;
+	config.depthBias = m_DepthBias;
+	config.cullMode = D3D12_CULL_MODE_BACK;
+	config.slopeScaledDepthBias = m_SlopeScaledDepthBias;
 
 	m_PSO = std::make_unique<PipelineState>();
 	m_PSO->Init(device, *rootSignature, config); 
+}
+
+void ShadowPass::RecreatePSO()
+{
+	ENGINE_INFO("Shadow PSO Updated -> DepthBias: {}, SlopeBias: {}", m_DepthBias, m_SlopeScaledDepthBias);
+	InitPSO(m_Device, m_RootSignature);
 }
 
 
@@ -111,7 +117,7 @@ void ShadowPass::UpdateConstantBuffer(ID3D12Device* device, CommandContext* comm
 			DirectX::XMMATRIX projF = XMMatrixIdentity();
 			
 			DirectX::XMFLOAT3 lightDir = GetDirectionFromRotation(transform.Rotation);
-			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 0.1f, 3, 0.1f, 1000, SHADOW_RESOLUTION, 100);
+			CalculateDirectionalLightMatrices(viewF, projF, cameraViewProj, lightDir, 0.01f, 1, 0.1f, 1000, SHADOW_RESOLUTION, 100);
 
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightViewMatrix, DirectX::XMMatrixTranspose(viewF));
 			DirectX::XMStoreFloat4x4(&m_ShadowConstantBufferDatas[currentFrame].LightProjectionMatrix, DirectX::XMMatrixTranspose(projF));

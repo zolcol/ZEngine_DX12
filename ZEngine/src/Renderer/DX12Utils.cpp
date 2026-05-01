@@ -34,69 +34,58 @@ void CalculateDirectionalLightMatrices(
 	};
 
 	XMVECTOR frustumCornersWS[8];
-	XMVECTOR frustumCenter = XMVectorZero();
-
+	XMVECTOR frustumCenterWS = XMVectorZero();
 	for (int i = 0; i < 8; ++i)
 	{
 		XMVECTOR corner = XMLoadFloat4(&frustumCornersNDC[i]);
 		corner = XMVector4Transform(corner, invViewProj);
 		corner /= XMVectorGetW(corner);
 		frustumCornersWS[i] = corner;
-		frustumCenter += corner;
+		frustumCenterWS += corner;
 	}
-	frustumCenter /= 8.0f;
+	frustumCenterWS /= 8.0f;
 
-	// --- BƯỚC MỚI: TÍNH BÁN KÍNH BAO QUANH (STABILITY) ---
-	// Tính khoảng cách xa nhất từ tâm đến các đỉnh để cố định kích thước Box
-	float sphereRadius = 0.0f;
-	for (int i = 0; i < 8; ++i)
-	{
-		float dist = XMVectorGetX(XMVector3Length(frustumCornersWS[i] - frustumCenter));
-		sphereRadius = (std::max)(sphereRadius, dist);
-	}
-	// Làm tròn bán kính để tránh sai số nhỏ
-	sphereRadius = (std::ceil)(sphereRadius * 16.0f) / 16.0f;
-
-	// 4. Thiết lập Light View
+	// 4. Thiết lập hướng đèn và View Matrix chính thức
 	XMVECTOR lightDir = XMVector3Normalize(XMLoadFloat3(&lightDirection));
-	XMVECTOR lightPos = frustumCenter - lightDir * shadowDistanceOffset;
 	XMVECTOR up = (fabs(XMVectorGetY(lightDir)) > 0.99f) ? XMVectorSet(0, 0, 1, 0) : XMVectorSet(0, 1, 0, 0);
 
-	outLightView = XMMatrixLookAtLH(lightPos, frustumCenter, up);
+	// Đẩy đèn ra xa để bắt được các vật thể đứng sau camera nhưng đổ bóng vào vùng nhìn
+	XMVECTOR lightPos = frustumCenterWS - lightDir * shadowDistanceOffset;
+	outLightView = XMMatrixLookAtLH(lightPos, frustumCenterWS, up);
 
-	// 5. Xác định giới hạn Ortho dựa trên bán kính (Tạo thành hình vuông)
-	float minX = -sphereRadius;
-	float maxX = sphereRadius;
-	float minY = -sphereRadius;
-	float maxY = sphereRadius;
-
-	// Tính toán Z tạm thời từ các đỉnh để bắt shadow caster
+	// 5. Tính toán giới hạn (AABB) của Frustum trong không gian của Đèn (Light Space)
+	float minX = FLT_MAX, maxX = -FLT_MAX;
+	float minY = FLT_MAX, maxY = -FLT_MAX;
 	float minZ = FLT_MAX, maxZ = -FLT_MAX;
+
 	for (int i = 0; i < 8; ++i)
 	{
-		XMVECTOR v = XMVector4Transform(frustumCornersWS[i], outLightView);
-		float z = XMVectorGetZ(v);
-		minZ = (std::min)(minZ, z);
-		maxZ = (std::max)(maxZ, z);
+		XMVECTOR cornerLS = XMVector4Transform(frustumCornersWS[i], outLightView);
+		XMFLOAT3 c;
+		XMStoreFloat3(&c, cornerLS);
+
+		minX = (std::min)(minX, c.x);
+		maxX = (std::max)(maxX, c.x);
+		minY = (std::min)(minY, c.y);
+		maxY = (std::max)(maxY, c.y);
+		minZ = (std::min)(minZ, c.z);
+		maxZ = (std::max)(maxZ, c.z);
 	}
 
-	// --- BƯỚC MỚI: TEXEL SNAPPING ---
-	float worldUnitsPerTexel = (sphereRadius * 2.0f) / shadowMapResolution;
+	// --- TEXEL SNAPPING CHO TIGHT AABB ---
+	float worldUnitsPerTexelX = (maxX - minX) / shadowMapResolution;
+	float worldUnitsPerTexelY = (maxY - minY) / shadowMapResolution;
 
-	// Làm tròn minX, minY về bội số của kích thước 1 texel
-	minX = (std::floor)(minX / worldUnitsPerTexel) * worldUnitsPerTexel;
-	maxX = (std::floor)(maxX / worldUnitsPerTexel) * worldUnitsPerTexel;
-	minY = (std::floor)(minY / worldUnitsPerTexel) * worldUnitsPerTexel;
-	maxY = (std::floor)(maxY / worldUnitsPerTexel) * worldUnitsPerTexel;
-	/*ENGINE_FATAL("sphereRadius = {}", sphereRadius);
-	ENGINE_FATAL("worldUnitsPerTexel = {}", worldUnitsPerTexel);*/
-	// 6. Ortho projection (Reversed-Z)
-	minZ = 0.1f;
-	// Lưu ý: minZ/maxZ cũng nên được mở rộng một chút để an toàn
+	minX = floor(minX / worldUnitsPerTexelX) * worldUnitsPerTexelX;
+	maxX = ceil(maxX / worldUnitsPerTexelX) * worldUnitsPerTexelX;
+	minY = floor(minY / worldUnitsPerTexelY) * worldUnitsPerTexelY;
+	maxY = ceil(maxY / worldUnitsPerTexelY) * worldUnitsPerTexelY;
+
+	// 6. Tạo ma trận Ortho (Reversed-Z: maxZ -> Near(1), minZ -> Far(0))
 	outLightProj = XMMatrixOrthographicOffCenterLH(
 		minX, maxX,
 		minY, maxY,
-		maxZ, // Near
-		minZ  // Far
+		maxZ + shadowDistanceOffset, // Near (nới rộng để bắt shadow caster)
+		0.1f						 // Far
 	);
 }

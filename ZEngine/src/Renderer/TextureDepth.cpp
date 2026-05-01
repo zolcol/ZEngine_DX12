@@ -48,7 +48,7 @@ bool TextureDepth::Init(ID3D12Device* device, CommandContext* commandContext, De
 
 	CD3DX12_RESOURCE_DESC resDesc = CD3DX12_RESOURCE_DESC::Tex2D(
 		format, width, height,
-		1, 0, 1, 0,
+		1, 1, 1, 0,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN
 	);
@@ -66,13 +66,13 @@ bool TextureDepth::Init(ID3D12Device* device, CommandContext* commandContext, De
 
 	if (InitSRV)
 	{
-		CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(srvFormat);
+		CD3DX12_SHADER_RESOURCE_VIEW_DESC srvDesc = CD3DX12_SHADER_RESOURCE_VIEW_DESC::Tex2D(srvFormat, 1);
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC dsv{};
 		dsv.Format = dsvFormat;
 		dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
 		dsv.Texture2D.MipSlice = 0;
-
+		
 		m_SRVIndex = descriptorManager->CreateSRV(m_Resource.Get(), &srvDesc);
 		m_DSVIndex = descriptorManager->CreateDSV(m_Resource.Get(), &dsv);
 	}

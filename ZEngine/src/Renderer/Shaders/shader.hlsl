@@ -120,10 +120,7 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     GlobalTextures[light.ShadowMapIndex].GetDimensions(width, height);
     float2 texelSize = 1.0 / float2(width, height);
 
-    float NoL = clamp(dot(N, L), 0.0, 1.0);
-    float3 biasPos = worldPos + N * (1.0 - NoL) * 0.05;
-
-    float4 shadowPos = mul(float4(biasPos, 1.0), light.LightViewProj);
+    float4 shadowPos = mul(float4(worldPos, 1.0), light.LightViewProj);
 
     // 1. Chặn Back-Projection (Dành cho Spotlight có w âm)
     if (shadowPos.w <= 0.0)
@@ -134,14 +131,12 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     projCoords.y = 1.0 - projCoords.y;
 
     // 2. Cập nhật thêm điều kiện z < 0.0 vào ranh giới
-    if (projCoords.z > 1.0 || projCoords.z < 0.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0)
+    if (projCoords.z > 1.0 || projCoords.z < 0.0 || 
+        projCoords.x < 0.0 || projCoords.x > 1.0 || 
+        projCoords.y < 0.0 || projCoords.y > 1.0)
         return 1.0;
 
     float currentDepth = projCoords.z;
-    float bias = 0.0003;
-
-    float noise = InterleavedGradientNoise(screenPos) * 2.0 * PI;
-    float2x2 rot = RotationMatrix(noise);
     
     float spread = 1.5;
     float2 spreadVec = spread * texelSize;
@@ -150,14 +145,14 @@ float CalculateShadow(float3 worldPos, float3 N, float3 L, LightData light, floa
     [unroll]
     for (int i = 0; i < 16; ++i)
     {
-        float2 offset = mul(PoissonDisk[i], rot) * spreadVec;
+        float2 offset = PoissonDisk[i] * spreadVec;
         shadow += GlobalTextures[light.ShadowMapIndex].SampleCmpLevelZero(
-            ShadowSampler, projCoords.xy + offset, currentDepth + bias
+            ShadowSampler, projCoords.xy + offset, currentDepth
         );
     }
     shadow /= 16.0;
 
-    return lerp(0.15, 1.0, shadow);
+    return lerp(0, 1.0, shadow);
 }
 
 // ==========================================
@@ -358,5 +353,8 @@ float4 PSMain(PixelInput input) : SV_TARGET
     color = ACESFilmic(color);
     color = pow(max(color, 0.0), 1.0 / 2.2);
 
+    
+    
+    
     return float4(color, albedoSample.a);
 }

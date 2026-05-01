@@ -6,6 +6,8 @@
 #include "RenderComponent.h"
 #include "UIHelper.h"
 #include "Input.h"
+#include "Renderer/Renderer.h"
+#include "Renderer/ShadowPass.h"
 
 void Editor::Init(HWND hwnd, Device* device, int framesInFlight)
 {
@@ -59,7 +61,7 @@ void Editor::BeginFrame()
 	ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), dockSpaceFlags);
 }
 
-void Editor::Update(Scene* scene, float dt)
+void Editor::Update(Scene* scene, Renderer* renderer, float dt)
 {
 	m_CameraController->Update(scene, dt);
 
@@ -74,7 +76,30 @@ void Editor::Update(Scene* scene, float dt)
 	DrawSceneHierarchy(scene);
 	DrawInspector(scene);
 	DrawEnvironmentSettings(scene);
+	DrawShadowSettings(renderer);
 	DrawGizmo(scene);
+}
+
+void Editor::DrawShadowSettings(Renderer* renderer)
+{
+	ImGui::Begin("Shadow Settings");
+
+	auto* shadowPass = renderer->GetShadowPass();
+	bool changed = false;
+
+	// Cho phép giá trị âm và dải giá trị rộng hơn
+	if (ImGui::DragInt("Depth Bias", &shadowPass->m_DepthBias, 100.0f, -1000000, 1000000))
+		changed = true;
+
+	if (ImGui::DragFloat("Slope Scaled Bias", &shadowPass->m_SlopeScaledDepthBias, 0.1f, -100.0f, 100.0f))
+		changed = true;
+
+	if (changed)
+	{
+		shadowPass->RecreatePSO();
+	}
+
+	ImGui::End();
 }
 
 void Editor::DrawGizmo(Scene* scene)

@@ -28,6 +28,8 @@ public:
 	void InitConstantBuffer(ID3D12Device* device, DescriptorManager* descriptorManager, uint32_t frameCount);
 	void UpdateConstantBuffer(ID3D12Device* device, CommandContext* commandContext, Scene* scene, uint32_t currentFrame);
 
+	void RecreatePSO();
+
 	DirectX::XMFLOAT4X4 GetLightViewProj(int currentFrame)
 	{
 		using namespace DirectX;
@@ -45,8 +47,13 @@ public:
 
 		return result;
 	}
+
+public:
+	int m_DepthBias = -5000;
+	float m_SlopeScaledDepthBias = -3.0f;
+
 private:
-	const int SHADOW_RESOLUTION = 4096;
+	const int SHADOW_RESOLUTION = 2048;
 	uint32_t m_FrameWidth;
 	uint32_t m_FrameHeight;
 	RootSignature* m_RootSignature = nullptr;

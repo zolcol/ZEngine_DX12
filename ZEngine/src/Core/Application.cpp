@@ -66,7 +66,7 @@ void Application::Run()
 		m_Scene->Update(Time::GetDeltaTime());
 
 		m_Editor->BeginFrame();
-		m_Editor->Update(m_Scene.get(), Time::GetDeltaTime());
+		m_Editor->Update(m_Scene.get(), m_Renderer.get(), Time::GetDeltaTime());
 
 		m_Renderer->BeginFrame(m_Scene.get());
 		m_Renderer->EndFrame(m_Scene.get(), m_Editor.get());

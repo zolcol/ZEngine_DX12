@@ -16,8 +16,8 @@ public:
 	void ShutDown();
 
 private:
-	const int WIDTH = 1600;
-	const int HEIGHT = 1200;
+	const int WIDTH = 1920;
+	const int HEIGHT = 1080;
 	const int FRAME_COUNT = 3;
 
 	std::unique_ptr<Window> m_Window;
